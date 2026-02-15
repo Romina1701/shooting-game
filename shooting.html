@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mini Shooting (Mobile Ready)</title>
+  <style>
+    html, body {
+      margin: 0; height: 100%;
+      background:#0b0f1a; color:#e8eefc;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    #wrap { display:flex; align-items:center; justify-content:center; height:100%; padding: 14px; box-sizing: border-box; }
+    canvas {
+      width: min(92vw, 420px);
+      height: auto;
+      aspect-ratio: 420 / 720;
+      background: radial-gradient(1200px 800px at 50% 60%, #101a35 0%, #070a12 55%, #05060b 100%);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.45);
+      touch-action: none; /* 重要：スワイプでページが動くの防止 */
+    }
+    .hud {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      display:flex; gap:12px; align-items:center; font-weight: 800; letter-spacing:.3px;
+      background: rgba(0,0,0,.25); padding: 8px 12px; border-radius: 999px; border:1px solid rgba(255,255,255,.12);
+      user-select:none;
+      z-index: 10;
+      backdrop-filter: blur(6px);
+    }
+    .hint {
+      position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+      font-size: 12px; opacity: .88; background: rgba(0,0,0,.25);
+      padding: 8px 12px; border-radius: 999px; border:1px solid rgba(255,255,255,.12);
+      user-select:none;
+      z-index: 10;
+      backdrop-filter: blur(6px);
+    }
+    button {
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.10);
+      color:#e8eefc; border-radius: 10px; padding: 6px 10px; cursor:pointer; font-weight: 900;
+    }
+    button:hover { background: rgba(255,255,255,.16); }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div>Score: <span id="score">0</span></div>
+    <div>Life: <span id="life">3</span></div>
+    <button id="restart" title="RでもOK">Restart</button>
+  </div>
+  <div class="hint">
+    スマホ: 画面をドラッグで移動（押してる間は連射） / PC: 矢印移動 + Space
+  </div>
+
+  <div id="wrap">
+    <canvas id="c" width="420" height="720"></canvas>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  const scoreEl = document.getElementById("score");
+  const lifeEl  = document.getElementById("life");
+  const restartBtn = document.getElementById("restart");
+
+  const W = canvas.width, H = canvas.height;
+
+  // ====== Utils ======
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand  = (a, b) => a + Math.random() * (b - a);
+  const now   = () => performance.now();
+
+  // ====== State ======
+  let keys = new Set();
+  let lastT = now();
+  let running = true;
+
+  const player = {
+    x: W / 2,
+    y: H - 90,
+    r: 14,
+    speed: 320,
+    shootCd: 0,
+    inv: 0
+  };
+
+  let bullets = [];
+  let enemies = [];
+  let particles = [];
+  let stars = [];
+
+  let score = 0;
+  let life = 3;
+  let wave = 1;
+  let spawnTimer = 0;
+
+  // ====== Touch Controls ======
+  let touchActive = false;
+  let touchX = player.x;
+  let touchY = player.y;
+
+  function canvasPosFromTouch(ev) {
+    const rect = canvas.getBoundingClientRect();
+    const t = ev.touches ? ev.touches[0] : ev;
+    const sx = W / rect.width;
+    const sy = H / rect.height;
+    const x = (t.clientX - rect.left) * sx;
+    const y = (t.clientY - rect.top) * sy;
+    return { x, y };
+  }
+
+  function onTouchStart(ev) {
+    ev.preventDefault();
+    touchActive = true;
+    const p = canvasPosFromTouch(ev);
+    touchX = p.x; touchY = p.y;
+  }
+  function onTouchMove(ev) {
+    ev.preventDefault();
+    const p = canvasPosFromTouch(ev);
+    touchX = p.x; touchY = p.y;
+  }
+  function onTouchEnd(ev) {
+    ev.preventDefault();
+    touchActive = false;
+  }
+
+  canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+  canvas.addEventListener("touchmove",  onTouchMove,  { passive: false });
+  canvas.addEventListener("touchend",   onTouchEnd,   { passive: false });
+  canvas.addEventListener("touchcancel",onTouchEnd,   { passive: false });
+
+  // iOSの「ダブルタップ拡大」抑止（必要な人向け）
+  canvas.addEventListener("gesturestart", (e) => e.preventDefault());
+
+  // ====== Background ======
+  function initStars() {
+    stars = Array.from({ length: 90 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      s: rand(0.6, 2.2),
+      v: rand(18, 80)
+    }));
+  }
+
+  // ====== Reset ======
+  function reset() {
+    bullets = [];
+    enemies = [];
+    particles = [];
+    score = 0;
+    life = 3;
+    wave = 1;
+    spawnTimer = 0;
+    player.x = W / 2;
+    player.y = H - 90;
+    player.shootCd = 0;
+    player.inv = 0;
+    running = true;
+    touchActive = false;
+    scoreEl.textContent = score;
+    lifeEl.textContent  = life;
+    initStars();
+  }
+
+  // ====== Particles ======
+  function addParticleBurst(x, y, n=14) {
+    for (let i=0;i<n;i++) {
+      particles.push({
+        x, y,
+        vx: rand(-180, 180),
+        vy: rand(-220, 120),
+        r: rand(1.2, 3.2),
+        a: 1,
+        life: rand(0.25, 0.65)
+      });
+    }
+  }
+
+  // ====== Enemy Spawn ======
+  function spawnEnemy() {
+    const typeRoll = Math.random();
+    const e = {
+      x: rand(20, W - 20),
+      y: -30,
+      r: 16,
+      hp: 1,
+      vx: rand(-40, 40),
+      vy: rand(80, 150) + wave * 6,
+      spin: rand(-2, 2),
+      ang: rand(0, Math.PI*2),
+      kind: typeRoll < 0.15 ? "bossy" : "normal"
+    };
+    if (e.kind === "bossy") { e.r = 22; e.hp = 3; e.vy = rand(60, 110) + wave * 5; }
+    enemies.push(e);
+  }
+
+  // ====== Input (Keyboard) ======
+  window.addEventListener("keydown", (e) => {
+    if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Space","KeyR"].includes(e.code)) e.preventDefault();
+    keys.add(e.code);
+    if (e.code === "KeyR") reset();
+  }, { passive:false });
+  window.addEventListener("keyup", (e) => keys.delete(e.code));
+  restartBtn.addEventListener("click", reset);
+
+  // ====== Collision ======
+  function hitCircle(ax, ay, ar, bx, by, br) {
+    const dx = ax - bx, dy = ay - by;
+    return (dx*dx + dy*dy) <= (ar+br)*(ar+br);
+  }
+
+  // ====== Draw helpers ======
+  function drawShip(x, y, r, inv) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    ctx.globalAlpha = inv ? 0.55 : 1;
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = "rgba(170,220,255,.6)";
+
+    ctx.beginPath();
+    ctx.moveTo(0, -r-10);
+    ctx.lineTo(r+10, r+10);
+    ctx.lineTo(0, r+2);
+    ctx.lineTo(-r-10, r+10);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(160,210,255,.92)";
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.ellipse(0, -5, 7, 10, 0, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(80,140,255,.8)";
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-8, r+10);
+    ctx.lineTo(0, r+22 + Math.sin(now()/80)*2);
+    ctx.lineTo(8, r+10);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(255,180,80,.85)";
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawEnemy(e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.rotate(e.ang);
+
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = e.kind === "bossy" ? "rgba(255,120,140,.55)" : "rgba(255,90,110,.35)";
+
+    ctx.beginPath();
+    ctx.moveTo(0, -e.r-6);
+    ctx.lineTo(e.r+8, 0);
+    ctx.lineTo(0, e.r+8);
+    ctx.lineTo(-e.r-8, 0);
+    ctx.closePath();
+
+    ctx.fillStyle = e.kind === "bossy" ? "rgba(255,130,160,.95)" : "rgba(255,90,120,.9)";
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(0, 0, e.kind === "bossy" ? 8 : 6, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(255,240,240,.9)";
+    ctx.fill();
+
+    if (e.kind === "bossy") {
+      ctx.beginPath();
+      ctx.arc(0, 0, e.r+6, 0, Math.PI*2);
+      ctx.strokeStyle = "rgba(255,255,255,.15)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const p = e.hp / 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, e.r+6, -Math.PI/2, -Math.PI/2 + Math.PI*2*p);
+      ctx.strokeStyle = "rgba(255,255,255,.55)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawBullet(b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = "rgba(120,255,210,.6)";
+    ctx.beginPath();
+    ctx.roundRect(-2.5, -10, 5, 20, 3);
+    ctx.fillStyle = "rgba(140,255,220,.95)";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ====== Update ======
+  function update(dt) {
+    // stars
+    for (const s of stars) {
+      s.y += s.v * dt;
+      if (s.y > H + 10) { s.y = -10; s.x = Math.random() * W; s.v = rand(18, 80); s.s = rand(0.6, 2.2); }
+    }
+
+    if (!running) return;
+
+    const shootDelay = 0.11;
+    const spawnRate = Math.max(0.18, 0.60 - wave * 0.02);
+
+    // keyboard move
+    let dx = 0, dy = 0;
+    if (keys.has("ArrowLeft")) dx -= 1;
+    if (keys.has("ArrowRight")) dx += 1;
+    if (keys.has("ArrowUp")) dy -= 1;
+    if (keys.has("ArrowDown")) dy += 1;
+
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len; dy /= len;
+
+    if (dx || dy) {
+      player.x = clamp(player.x + dx * player.speed * dt, 18, W - 18);
+      player.y = clamp(player.y + dy * player.speed * dt, 30, H - 30);
+    }
+
+    // touch follow
+    if (touchActive) {
+      const follow = 10; // 大きいほど追従が速い
+      player.x += (touchX - player.x) * (1 - Math.exp(-follow * dt));
+      player.y += (touchY - player.y) * (1 - Math.exp(-follow * dt));
+      player.x = clamp(player.x, 18, W - 18);
+      player.y = clamp(player.y, 30, H - 30);
+    }
+
+    // shooting: Space OR touchActive
+    player.shootCd -= dt;
+    if ((keys.has("Space") || touchActive) && player.shootCd <= 0) {
+      player.shootCd = shootDelay;
+      bullets.push({ x: player.x, y: player.y - 22, vy: -720, r: 5 });
+      addParticleBurst(player.x, player.y - 28, 6);
+    }
+
+    // spawn enemies
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnTimer = spawnRate;
+      spawnEnemy();
+    }
+
+    // bullets
+    bullets.forEach(b => b.y += b.vy * dt);
+    bullets = bullets.filter(b => b.y > -30);
+
+    // enemies
+    enemies.forEach(e => {
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
+      e.ang += e.spin * dt;
+      if (e.x < 18 || e.x > W - 18) e.vx *= -1;
+    });
+    enemies = enemies.filter(e => e.y < H + 60);
+
+    // particles
+    for (const p of particles) {
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 420 * dt;
+      p.a = clamp(p.life / 0.65, 0, 1);
+    }
+    particles = particles.filter(p => p.life > 0);
+
+    // bullet vs enemy
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      for (let j = bullets.length - 1; j >= 0; j--) {
+        const b = bullets[j];
+        if (hitCircle(e.x, e.y, e.r, b.x, b.y, b.r)) {
+          bullets.splice(j, 1);
+          e.hp -= 1;
+          addParticleBurst(b.x, b.y, 10);
+          if (e.hp <= 0) {
+            enemies.splice(i, 1);
+            score += (e.kind === "bossy") ? 60 : 20;
+            scoreEl.textContent = score;
+            addParticleBurst(e.x, e.y, e.kind === "bossy" ? 30 : 18);
+            if (score > wave * 250) wave += 1;
+          }
+          break;
+        }
+      }
+    }
+
+    // player vs enemy
+    player.inv -= dt;
+    if (player.inv < 0) player.inv = 0;
+
+    if (player.inv === 0) {
+      for (const e of enemies) {
+        if (hitCircle(player.x, player.y, player.r, e.x, e.y, e.r)) {
+          life -= 1;
+          lifeEl.textContent = life;
+          player.inv = 1.2;
+          addParticleBurst(player.x, player.y, 40);
+          e.hp = 0;
+          if (life <= 0) running = false;
+          break;
+        }
+      }
+      enemies = enemies.filter(e => e.hp > 0);
+    }
+  }
+
+  // ====== Draw ======
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // stars
+    ctx.save();
+    for (const s of stars) {
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      ctx.fillRect(s.x, s.y, s.s, s.s);
+    }
+    ctx.restore();
+
+    // vignette
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    const g = ctx.createRadialGradient(W/2, H/2, 80, W/2, H/2, 520);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.75)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    for (const b of bullets) drawBullet(b);
+    for (const e of enemies) drawEnemy(e);
+
+    const blink = player.inv > 0 ? (Math.floor(now()/90) % 2 === 0) : false;
+    if (!blink) drawShip(player.x, player.y, player.r, player.inv > 0);
+
+    for (const p of particles) {
+      ctx.save();
+      ctx.globalAlpha = p.a;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = "rgba(255,255,255,.9)";
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (!running) {
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "rgba(0,0,0,.55)";
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,255,255,.95)";
+      ctx.font = "800 40px system-ui";
+      ctx.fillText("GAME OVER", W/2, H/2 - 20);
+
+      ctx.font = "700 16px system-ui";
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      ctx.fillText(`Score: ${score}   Wave: ${wave}`, W/2, H/2 + 18);
+
+      ctx.fillStyle = "rgba(255,255,255,.75)";
+      ctx.fillText("Restartで再挑戦", W/2, H/2 + 48);
+      ctx.restore();
+    }
+  }
+
+  // ====== Loop ======
+  function loop() {
+    const t = now();
+    const dt = Math.min(0.033, (t - lastT) / 1000);
+    lastT = t;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // roundRect polyfill
+  if (!ctx.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
+      const rr = Math.min(r, w/2, h/2);
+      this.beginPath();
+      this.moveTo(x+rr, y);
+      this.arcTo(x+w, y, x+w, y+h, rr);
+      this.arcTo(x+w, y+h, x, y+h, rr);
+      this.arcTo(x, y+h, x, y, rr);
+      this.arcTo(x, y, x+w, y, rr);
+      this.closePath();
+      return this;
+    };
+  }
+
+  reset();
+  loop();
+})();
+</script>
+</body>
+</html>
