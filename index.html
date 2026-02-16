@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Mini Shooting (Mobile Ready)</title>
+  <title>Mini Shooting (Mobile + Sound)</title>
   <style>
     html, body {
       margin: 0; height: 100%;
@@ -20,15 +20,17 @@
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 12px;
       box-shadow: 0 10px 40px rgba(0,0,0,.45);
-      touch-action: none; /* 重要：スワイプでページが動くの防止 */
+      touch-action: none;
     }
     .hud {
       position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-      display:flex; gap:12px; align-items:center; font-weight: 800; letter-spacing:.3px;
+      display:flex; gap:10px; align-items:center; font-weight: 800; letter-spacing:.3px;
       background: rgba(0,0,0,.25); padding: 8px 12px; border-radius: 999px; border:1px solid rgba(255,255,255,.12);
       user-select:none;
       z-index: 10;
       backdrop-filter: blur(6px);
+      flex-wrap: wrap;
+      justify-content: center;
     }
     .hint {
       position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
@@ -37,6 +39,8 @@
       user-select:none;
       z-index: 10;
       backdrop-filter: blur(6px);
+      text-align: center;
+      max-width: 92vw;
     }
     button {
       border: 1px solid rgba(255,255,255,.18);
@@ -44,6 +48,7 @@
       color:#e8eefc; border-radius: 10px; padding: 6px 10px; cursor:pointer; font-weight: 900;
     }
     button:hover { background: rgba(255,255,255,.16); }
+    .small { font-size: 12px; font-weight: 800; opacity: .95; }
   </style>
 </head>
 <body>
@@ -51,9 +56,12 @@
     <div>Score: <span id="score">0</span></div>
     <div>Life: <span id="life">3</span></div>
     <button id="restart" title="RでもOK">Restart</button>
+    <button id="sound">🔇 Sound OFF</button>
+    <span class="small" id="soundHint">（音はボタン押して有効化）</span>
   </div>
   <div class="hint">
-    スマホ: 画面をドラッグで移動（押してる間は連射） / PC: 矢印移動 + Space
+    スマホ: 画面ドラッグで移動（押してる間は連射） / PC: 矢印移動 + Space<br/>
+    ※iPhoneは音を鳴らすのに最初のタップが必要
   </div>
 
   <div id="wrap">
@@ -67,6 +75,8 @@
   const scoreEl = document.getElementById("score");
   const lifeEl  = document.getElementById("life");
   const restartBtn = document.getElementById("restart");
+  const soundBtn = document.getElementById("sound");
+  const soundHint = document.getElementById("soundHint");
 
   const W = canvas.width, H = canvas.height;
 
@@ -75,19 +85,138 @@
   const rand  = (a, b) => a + Math.random() * (b - a);
   const now   = () => performance.now();
 
-  // ====== State ======
+  // ====== Sound (Web Audio, no external files) ======
+  let audioCtx = null;
+  let master = null;
+  let bgmGain = null;
+  let sfxGain = null;
+  let soundEnabled = false;
+  let bgmTimer = null;
+  let bgmStep = 0;
+
+  function ensureAudio() {
+    if (audioCtx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+    master = audioCtx.createGain();
+    bgmGain = audioCtx.createGain();
+    sfxGain = audioCtx.createGain();
+
+    // volumes
+    master.gain.value = 0.8;
+    bgmGain.gain.value = 0.20;
+    sfxGain.gain.value = 0.45;
+
+    bgmGain.connect(master);
+    sfxGain.connect(master);
+    master.connect(audioCtx.destination);
+  }
+
+  function setSound(on) {
+    ensureAudio();
+    soundEnabled = on;
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    soundBtn.textContent = on ? "🔊 Sound ON" : "🔇 Sound OFF";
+    soundHint.textContent = on ? "" : "（音はボタン押して有効化）";
+
+    if (on) startBgm();
+    else stopBgm();
+  }
+
+  function blip({freq=440, dur=0.07, type="sine", gain=0.25, toGain=sfxGain, slide=0, noise=false}) {
+    if (!soundEnabled) return;
+    ensureAudio();
+    const t0 = audioCtx.currentTime;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+    if (noise) {
+      // tiny noise burst
+      const bufferSize = Math.floor(audioCtx.sampleRate * dur);
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/bufferSize, 2);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buffer;
+
+      // filter for "爆発っぽさ"
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1200, t0);
+      filter.frequency.exponentialRampToValueAtTime(180, t0 + dur);
+
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(toGain);
+
+      src.start(t0);
+      src.stop(t0 + dur);
+      return;
+    }
+
+    const osc = audioCtx.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (slide !== 0) osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t0 + dur);
+
+    osc.connect(g);
+    g.connect(toGain);
+    osc.start(t0);
+    osc.stop(t0 + dur);
+  }
+
+  // SFX
+  const sfx = {
+    shoot() { blip({freq: 760, dur: 0.05, type:"square", gain:0.12, slide:-220}); },
+    hit()   { blip({freq: 220, dur: 0.08, type:"sawtooth", gain:0.18, slide:-120}); },
+    boom()  { blip({dur: 0.18, gain:0.28, noise:true}); },
+    damage(){ blip({freq: 140, dur: 0.16, type:"triangle", gain:0.22, slide:-60}); }
+  };
+
+  // BGM: simple step sequencer (sine-ish chiptune)
+  function startBgm() {
+    if (!soundEnabled) return;
+    ensureAudio();
+    if (bgmTimer) return;
+
+    const scale = [0, 3, 5, 7, 10]; // minor pentatonic-ish
+    const base = 220; // A3
+    const pattern = [
+      0, 2, 3, 2,  1, 2, 4, 2,
+      0, 2, 3, 4,  3, 2, 1, 2
+    ];
+
+    bgmStep = 0;
+    bgmTimer = setInterval(() => {
+      if (!soundEnabled) return;
+      const idx = pattern[bgmStep % pattern.length];
+      const semis = scale[idx % scale.length] + (idx >= scale.length ? 12 : 0);
+      const freq = base * Math.pow(2, semis/12);
+
+      // note
+      blip({freq, dur:0.12, type:"sine", gain:0.10, toGain:bgmGain});
+      // soft "kick"
+      if (bgmStep % 4 === 0) blip({freq: 90, dur:0.10, type:"sine", gain:0.08, toGain:bgmGain, slide:-20});
+
+      bgmStep++;
+    }, 140); // tempo
+  }
+
+  function stopBgm() {
+    if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+  }
+
+  soundBtn.addEventListener("click", () => setSound(!soundEnabled));
+
+  // ====== Game State ======
   let keys = new Set();
   let lastT = now();
   let running = true;
 
-  const player = {
-    x: W / 2,
-    y: H - 90,
-    r: 14,
-    speed: 320,
-    shootCd: 0,
-    inv: 0
-  };
+  const player = { x: W/2, y: H-90, r: 14, speed: 320, shootCd: 0, inv: 0 };
 
   let bullets = [];
   let enemies = [];
@@ -119,6 +248,9 @@
     touchActive = true;
     const p = canvasPosFromTouch(ev);
     touchX = p.x; touchY = p.y;
+
+    // iOS対策: ここで音を有効化しておくと気持ちよく鳴り始める
+    if (soundEnabled) { ensureAudio(); if (audioCtx.state === "suspended") audioCtx.resume(); }
   }
   function onTouchMove(ev) {
     ev.preventDefault();
@@ -134,8 +266,6 @@
   canvas.addEventListener("touchmove",  onTouchMove,  { passive: false });
   canvas.addEventListener("touchend",   onTouchEnd,   { passive: false });
   canvas.addEventListener("touchcancel",onTouchEnd,   { passive: false });
-
-  // iOSの「ダブルタップ拡大」抑止（必要な人向け）
   canvas.addEventListener("gesturestart", (e) => e.preventDefault());
 
   // ====== Background ======
@@ -168,6 +298,8 @@
     initStars();
   }
 
+  restartBtn.addEventListener("click", reset);
+
   // ====== Particles ======
   function addParticleBurst(x, y, n=14) {
     for (let i=0;i<n;i++) {
@@ -182,7 +314,7 @@
     }
   }
 
-  // ====== Enemy Spawn ======
+  // ====== Enemies ======
   function spawnEnemy() {
     const typeRoll = Math.random();
     const e = {
@@ -205,9 +337,11 @@
     if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Space","KeyR"].includes(e.code)) e.preventDefault();
     keys.add(e.code);
     if (e.code === "KeyR") reset();
+    // 何かキー押したら音の準備だけしておく（ONなら）
+    if (soundEnabled) { ensureAudio(); if (audioCtx.state === "suspended") audioCtx.resume(); }
   }, { passive:false });
+
   window.addEventListener("keyup", (e) => keys.delete(e.code));
-  restartBtn.addEventListener("click", reset);
 
   // ====== Collision ======
   function hitCircle(ax, ay, ar, bx, by, br) {
@@ -304,6 +438,21 @@
     ctx.restore();
   }
 
+  // ====== roundRect polyfill ======
+  if (!ctx.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
+      const rr = Math.min(r, w/2, h/2);
+      this.beginPath();
+      this.moveTo(x+rr, y);
+      this.arcTo(x+w, y, x+w, y+h, rr);
+      this.arcTo(x+w, y+h, x, y+h, rr);
+      this.arcTo(x, y+h, x, y, rr);
+      this.arcTo(x, y, x+w, y, rr);
+      this.closePath();
+      return this;
+    };
+  }
+
   // ====== Update ======
   function update(dt) {
     // stars
@@ -334,19 +483,21 @@
 
     // touch follow
     if (touchActive) {
-      const follow = 10; // 大きいほど追従が速い
+      const follow = 10;
       player.x += (touchX - player.x) * (1 - Math.exp(-follow * dt));
       player.y += (touchY - player.y) * (1 - Math.exp(-follow * dt));
       player.x = clamp(player.x, 18, W - 18);
       player.y = clamp(player.y, 30, H - 30);
     }
 
-    // shooting: Space OR touchActive
+    // shooting
+    const wantShoot = keys.has("Space") || touchActive;
     player.shootCd -= dt;
-    if ((keys.has("Space") || touchActive) && player.shootCd <= 0) {
+    if (wantShoot && player.shootCd <= 0) {
       player.shootCd = shootDelay;
       bullets.push({ x: player.x, y: player.y - 22, vy: -720, r: 5 });
       addParticleBurst(player.x, player.y - 28, 6);
+      sfx.shoot();
     }
 
     // spawn enemies
@@ -388,11 +539,13 @@
           bullets.splice(j, 1);
           e.hp -= 1;
           addParticleBurst(b.x, b.y, 10);
+          sfx.hit();
           if (e.hp <= 0) {
             enemies.splice(i, 1);
             score += (e.kind === "bossy") ? 60 : 20;
             scoreEl.textContent = score;
             addParticleBurst(e.x, e.y, e.kind === "bossy" ? 30 : 18);
+            sfx.boom();
             if (score > wave * 250) wave += 1;
           }
           break;
@@ -411,8 +564,13 @@
           lifeEl.textContent = life;
           player.inv = 1.2;
           addParticleBurst(player.x, player.y, 40);
+          sfx.damage();
           e.hp = 0;
-          if (life <= 0) running = false;
+          if (life <= 0) {
+            running = false;
+            // game over sting
+            sfx.boom();
+          }
           break;
         }
       }
@@ -488,21 +646,6 @@
     update(dt);
     draw();
     requestAnimationFrame(loop);
-  }
-
-  // roundRect polyfill
-  if (!ctx.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
-      const rr = Math.min(r, w/2, h/2);
-      this.beginPath();
-      this.moveTo(x+rr, y);
-      this.arcTo(x+w, y, x+w, y+h, rr);
-      this.arcTo(x+w, y+h, x, y+h, rr);
-      this.arcTo(x, y+h, x, y, rr);
-      this.arcTo(x, y, x+w, y, rr);
-      this.closePath();
-      return this;
-    };
   }
 
   reset();
