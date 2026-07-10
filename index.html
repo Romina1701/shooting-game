@@ -1,656 +1,2376 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Mini Shooting (Mobile + Sound)</title>
-  <style>
-    html, body {
-      margin: 0; height: 100%;
-      background:#0b0f1a; color:#e8eefc;
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      overflow: hidden;
-    }
-    #wrap { display:flex; align-items:center; justify-content:center; height:100%; padding: 14px; box-sizing: border-box; }
-    canvas {
-      width: min(92vw, 420px);
-      height: auto;
-      aspect-ratio: 420 / 720;
-      background: radial-gradient(1200px 800px at 50% 60%, #101a35 0%, #070a12 55%, #05060b 100%);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,.45);
-      touch-action: none;
-    }
-    .hud {
-      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-      display:flex; gap:10px; align-items:center; font-weight: 800; letter-spacing:.3px;
-      background: rgba(0,0,0,.25); padding: 8px 12px; border-radius: 999px; border:1px solid rgba(255,255,255,.12);
-      user-select:none;
-      z-index: 10;
-      backdrop-filter: blur(6px);
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .hint {
-      position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
-      font-size: 12px; opacity: .88; background: rgba(0,0,0,.25);
-      padding: 8px 12px; border-radius: 999px; border:1px solid rgba(255,255,255,.12);
-      user-select:none;
-      z-index: 10;
-      backdrop-filter: blur(6px);
-      text-align: center;
-      max-width: 92vw;
-    }
-    button {
-      border: 1px solid rgba(255,255,255,.18);
-      background: rgba(255,255,255,.10);
-      color:#e8eefc; border-radius: 10px; padding: 6px 10px; cursor:pointer; font-weight: 900;
-    }
-    button:hover { background: rgba(255,255,255,.16); }
-    .small { font-size: 12px; font-weight: 800; opacity: .95; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>入庫報告書フォーム</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef1f5;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Yu Gothic",Meiryo,Arial,sans-serif;color:#111}
+.app{max-width:980px;margin:0 auto;padding:12px}
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+h1{font-size:21px;margin:4px 0 12px}
+h2{font-size:17px;margin:18px 0 8px;border-left:5px solid #111;padding-left:8px}
+label{display:block;font-weight:700;margin-top:10px}
+input,select,textarea{width:100%;font-size:16px;padding:11px;border:1px solid #b9c0c9;border-radius:8px;background:white}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+button{width:100%;font-size:17px;font-weight:700;padding:13px;border:0;border-radius:10px;color:white;background:#1456b8;margin-top:12px}
+button.dark{background:#111}button.green{background:#16803c}button.red{background:#b42318}
+.note{font-size:8px;color:#555}.small{font-size:12px;color:#666}.photo-status{font-size:8px;color:#166534;margin-top:4px}
+.item-card{background:#fff;border:1px solid #d6dbe3;border-radius:10px;padding:10px;margin:8px 0}
+.item-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.item-head strong{font-size:16px}.item-head button{width:auto;padding:8px 12px;font-size:14px;margin:0}
+
+.sheet-wrap{background:#fff;padding:12px;overflow:auto}
+.sheet{width:794px;height:1123px;margin:0 auto;background:#fff;border:2px solid #111;padding:10px 14px 8px;font-family:"Yu Gothic",Meiryo,Arial,sans-serif;position:relative;overflow:hidden}
+.header{display:grid;grid-template-columns:58px 1fr 310px;border:2px solid #111;border-bottom:0;height:44px}
+.qr{border-right:1px solid #111;display:flex;align-items:center;justify-content:center}.qr canvas{width:34px;height:34px;display:block;image-rendering:pixelated;background:#fff}
+.title{display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900}.head-right{border-left:1px solid #111}.head-line{display:grid;grid-template-columns:92px 1fr;height:21px;border-bottom:1px solid #111;font-size:12px;align-items:center}.head-line:last-child{border-bottom:0}.head-label{height:100%;display:flex;align-items:center;justify-content:center;border-right:1px solid #111;background:#eee;font-weight:900}.head-value{text-align:center;padding:0 4px}
+.logo-row{display:grid;grid-template-columns:1fr 310px;height:24px;border:2px solid #111;border-bottom:0}.logo{display:flex;align-items:center;font-size:18px;font-weight:900;font-style:italic;padding-left:7px}.logo-side{border-left:1px solid #111}
+.top-grid{border:2px solid #111;border-bottom:0}.top-row{display:grid;grid-template-columns:1fr 1fr;min-height:38px;border-bottom:1px solid #111}.top-cell{position:relative;display:flex;align-items:end;justify-content:center;padding:16px 6px 4px;font-size:17px;text-align:center}.top-cell:first-child{border-right:1px solid #111}.caption{position:absolute;top:2px;left:0;right:0;text-align:center;font-size:11px;font-weight:900;color:#444}
+.mawb-row{display:grid;grid-template-columns:1fr 1fr;border:2px solid #111;border-bottom:0;height:32px}.mawb-cell{display:flex;align-items:end;padding:0 8px 3px;font-size:17px}.mawb-cell:first-child{border-right:1px solid #111}.mawb-label{font-family:serif;font-size:17px;font-weight:700}
+table{width:100%;border-collapse:collapse}.detail-table{border:2px solid #111;font-size:12px}.detail-table th,.detail-table td{border:1px solid #111;text-align:center;height:22px;padding:1px}.detail-table th{background:#e7e7e7;font-weight:900}.detail-table .remarks{text-align:left;padding-left:5px}.detail-table .shape{font-size:11px}
+.total{display:grid;grid-template-columns:160px 1fr 160px 1fr;border:2px solid #111;border-top:0;height:42px;font-size:25px}.total div{display:flex;align-items:center;justify-content:center;border-right:1px solid #111}.total div:nth-child(1),.total div:nth-child(3){background:#eee;font-weight:900}.total div:last-child{border-right:0}
+.photo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;height:380px;border-left:2px solid #111;border-right:2px solid #111;border-bottom:2px solid #111}.photo-slot{border-right:1px solid #111;border-bottom:1px solid #111;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fafafa;position:relative}.photo-slot:nth-child(3),.photo-slot:nth-child(6){border-right:0}.photo-slot:nth-child(n+4){border-bottom:0}.photo-slot img{width:100%;height:100%;object-fit:cover}.photo-name{position:absolute;top:8px;left:10px;font-size:28px;color:#333}
+.blank-space{height:18px;border-left:2px solid #111;border-right:2px solid #111}.footer{position:absolute;left:16px;right:16px;bottom:8px;height:55px}.barcode-svg{display:block;width:45mm;height:30px}.barcode-text{font-family:monospace;font-size:7px;letter-spacing:2px;text-align:left;margin-left:8px;line-height:1.1}.company{position:absolute;right:0;bottom:0;font-size:8px}
+@page{size:A4 portrait;margin:0}
+@media print{html,body{width:210mm;height:297mm;background:#fff}.card{display:none}.app{padding:0;max-width:none}.sheet-wrap{padding:0;overflow:visible}.sheet{width:210mm;height:297mm;margin:0;border:2px solid #111;transform:none}}
+@media screen and (max-width:820px){.sheet{transform:scale(.46);transform-origin:top left;margin:0}.sheet-wrap{height:540px}.row,.row3,.row4{grid-template-columns:1fr 1fr}}
+
+/* ===== A4印刷専用：スマホ縮小表示を絶対に無効化 ===== */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  .card {
+    display: none !important;
+  }
+
+  .app,
+  .sheet-wrap {
+    display: block !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .sheet {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    padding: 3mm 4mm 3mm !important;
+    border: 1.2mm solid #111 !important;
+    transform: none !important;
+    transform-origin: top left !important;
+    scale: 1 !important;
+    position: relative !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .header { height: 12mm !important; }
+  .logo-row { height: 7mm !important; }
+  .top-row { min-height: 11mm !important; }
+  .mawb-row { height: 9mm !important; }
+
+  .detail-table th,
+  .detail-table td {
+    height: 6.2mm !important;
+  }
+
+  .total {
+    height: 12mm !important;
+  }
+
+  .photo-grid {
+    height: 100mm !important;
+  }
+
+  .blank-space {
+    height: 6mm !important;
+  }
+
+  .footer {
+    bottom: 2mm !important;
+    left: 4mm !important;
+    right: 4mm !important;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+
+/* ===== スマホ入力画面：重なり防止・ボタン配置見直し ===== */
+.card {
+  overflow: hidden;
+}
+
+.action-area {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 12px 0 4px;
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #d6dbe3;
+  border-radius: 12px;
+}
+
+.action-area button {
+  margin-top: 0;
+}
+
+@media screen and (max-width: 820px) {
+  .app {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .row,
+  .row3 {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .row4 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .row > div,
+  .row3 > div,
+  .row4 > div {
+    min-width: 0 !important;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    font-size: 16px !important;
+  }
+
+  label {
+    margin-top: 12px;
+  }
+
+  .sheet {
+    transform: scale(.46) !important;
+    transform-origin: top left !important;
+    margin: 0 !important;
+  }
+
+  .sheet-wrap {
+    height: 540px !important;
+    overflow: hidden !important;
+  }
+}
+
+/* ===== PDF/A4保存専用：必ず1ページに固定 ===== */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .sheet,
+  .sheet * {
+    visibility: visible !important;
+  }
+
+  .sheet {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    padding: 3mm 4mm 3mm !important;
+    border: 1mm solid #111 !important;
+    transform: none !important;
+    scale: 1 !important;
+    overflow: hidden !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .app,
+  .sheet-wrap {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  .card {
+    display: none !important;
+  }
+
+  .header { height: 12mm !important; }
+  .logo-row { height: 7mm !important; }
+  .top-row { min-height: 10.5mm !important; }
+  .mawb-row { height: 8.5mm !important; }
+
+  .detail-table th,
+  .detail-table td {
+    height: 5.8mm !important;
+    font-size: 10px !important;
+  }
+
+  .total {
+    height: 11mm !important;
+  }
+
+  .photo-grid {
+    height: 96mm !important;
+  }
+
+  .blank-space {
+    height: 25mm !important;
+  }
+
+  .footer {
+    left: 4mm !important;
+    right: 4mm !important;
+    bottom: 2mm !important;
+    height: 15mm !important;
+  }
+
+  .barcode-svg {
+    height: 8mm !important;
+  }
+}
+
+
+/* ===== 下部操作ボタンを現場向けに大きく固定 ===== */
+.action-area {
+  margin-top: 20px !important;
+}
+
+.action-area button {
+  min-height: 56px !important;
+  font-size: 18px !important;
+}
+
+
+/* ===== iPhone PDF 1ページ安全版 ===== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .sheet,
+  .sheet * {
+    visibility: visible !important;
+  }
+
+  .sheet-wrap {
+    display: block !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  .sheet {
+    position: fixed !important;
+    left: 7mm !important;
+    top: 7mm !important;
+    width: 196mm !important;
+    height: 283mm !important;
+    min-height: 0 !important;
+    max-height: 283mm !important;
+    margin: 0 !important;
+    padding: 2.5mm 3mm 2.5mm !important;
+    border: 0.7mm solid #111 !important;
+    transform: none !important;
+    scale: 1 !important;
+    overflow: hidden !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-before: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .header { height: 11mm !important; }
+  .logo-row { height: 6.5mm !important; }
+  .top-row { min-height: 10mm !important; }
+  .mawb-row { height: 8mm !important; }
+
+  .detail-table {
+    font-size: 10px !important;
+  }
+
+  .detail-table th,
+  .detail-table td {
+    height: 5.2mm !important;
+    font-size: 9px !important;
+    line-height: 1.05 !important;
+  }
+
+  .total {
+    height: 10mm !important;
+    font-size: 20px !important;
+  }
+
+  .photo-grid {
+    height: 88mm !important;
+  }
+
+  .photo-name {
+    font-size: 20px !important;
+  }
+
+  .blank-space {
+    height: 13mm !important;
+  }
+
+  .footer {
+    position: absolute !important;
+    left: 3mm !important;
+    right: 3mm !important;
+    bottom: 1.5mm !important;
+    height: 13mm !important;
+    overflow: hidden !important;
+  }
+
+  .barcode-svg {
+    height: 7mm !important;
+  }
+
+  .barcode-text {
+    font-size: 10px !important;
+    line-height: 1 !important;
+    letter-spacing: 3px !important;
+  }
+
+  .company {
+    font-size: 10px !important;
+    bottom: 0 !important;
+  }
+
+  .card {
+    display: none !important;
+  }
+}
+
+
+/* ===== iPhone PDF 1ページ最終寄せ：残りカス2ページ防止 ===== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .sheet,
+  .sheet * {
+    visibility: visible !important;
+  }
+
+  .sheet {
+    position: fixed !important;
+    left: 9mm !important;
+    top: 7mm !important;
+    width: 192mm !important;
+    height: 276mm !important;
+    min-height: 0 !important;
+    max-height: 276mm !important;
+    margin: 0 !important;
+    padding: 2mm 3mm 2mm !important;
+    border: 0.7mm solid #111 !important;
+    transform: none !important;
+    scale: 1 !important;
+    overflow: hidden !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-before: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .header { height: 10.5mm !important; }
+  .logo-row { height: 6mm !important; }
+  .top-row { min-height: 9.3mm !important; }
+  .mawb-row { height: 7.5mm !important; }
+
+  .detail-table {
+    font-size: 9px !important;
+  }
+
+  .detail-table th,
+  .detail-table td {
+    height: 4.9mm !important;
+    font-size: 8.6px !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+  }
+
+  .total {
+    height: 9.5mm !important;
+    font-size: 18px !important;
+  }
+
+  .photo-grid {
+    height: 82mm !important;
+  }
+
+  .photo-name {
+    font-size: 18px !important;
+  }
+
+  .blank-space {
+    height: 4mm !important;
+  }
+
+  .footer {
+    position: absolute !important;
+    left: 3mm !important;
+    right: 3mm !important;
+    bottom: 1mm !important;
+    height: 12mm !important;
+    overflow: hidden !important;
+  }
+
+  .barcode-svg {
+    height: 6.5mm !important;
+  }
+
+  .barcode-text {
+    font-size: 9px !important;
+    line-height: 1 !important;
+    letter-spacing: 2.5px !important;
+  }
+
+  .company {
+    font-size: 9px !important;
+    bottom: 0 !important;
+  }
+}
+
+
+/* ===== iPhone PDF 1ページさらに圧縮版 ===== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .sheet,
+  .sheet * {
+    visibility: visible !important;
+  }
+
+  .sheet {
+    position: fixed !important;
+    left: 10mm !important;
+    top: 7mm !important;
+    width: 190mm !important;
+    height: 270mm !important;
+    min-height: 0 !important;
+    max-height: 270mm !important;
+    margin: 0 !important;
+    padding: 2mm 3mm 2mm !important;
+    border: 0.6mm solid #111 !important;
+    transform: none !important;
+    scale: 1 !important;
+    overflow: hidden !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-before: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .header { height: 10mm !important; }
+  .title { font-size: 22px !important; }
+  .logo-row { height: 5.5mm !important; }
+  .top-row { min-height: 8.8mm !important; }
+  .mawb-row { height: 7mm !important; }
+
+  .top-cell,
+  .mawb-cell {
+    font-size: 12px !important;
+  }
+
+  .caption {
+    font-size: 8px !important;
+  }
+
+  .detail-table th,
+  .detail-table td {
+    height: 4.4mm !important;
+    font-size: 8px !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+  }
+
+  .total {
+    height: 8.5mm !important;
+    font-size: 16px !important;
+  }
+
+  .photo-grid {
+    height: 74mm !important;
+  }
+
+  .photo-name {
+    font-size: 16px !important;
+  }
+
+  .blank-space {
+    height: 0 !important;
+    border-left: 2px solid #111 !important;
+    border-right: 2px solid #111 !important;
+  }
+
+  .footer {
+    position: absolute !important;
+    left: 3mm !important;
+    right: 3mm !important;
+    bottom: 1mm !important;
+    height: 10mm !important;
+    overflow: hidden !important;
+  }
+
+  .barcode-svg {
+    height: 5.5mm !important;
+  }
+
+  .barcode-text {
+    font-size: 8px !important;
+    line-height: 1 !important;
+    letter-spacing: 2px !important;
+  }
+
+  .company {
+    font-size: 8px !important;
+    bottom: 0 !important;
+  }
+}
+
+/* ===== 入力画面ボタン少し小さめ ===== */
+.action-area {
+  padding: 8px !important;
+}
+
+.action-area button {
+  min-height: 48px !important;
+  font-size: 16px !important;
+  padding: 10px 12px !important;
+}
+
+
+/* ===== 会社名削除・完全1ページ優先 ===== */
+.company {
+  display: none !important;
+}
+
+@media print {
+  .company {
+    display: none !important;
+  }
+
+  .sheet {
+    left: 10mm !important;
+    top: 7mm !important;
+    width: 190mm !important;
+    height: 265mm !important;
+    max-height: 265mm !important;
+    padding: 2mm 3mm 1.5mm !important;
+  }
+
+  .photo-grid {
+    height: 70mm !important;
+  }
+
+  .blank-space {
+    display: none !important;
+    height: 0 !important;
+  }
+
+  .footer {
+    bottom: 1mm !important;
+    height: 8mm !important;
+  }
+
+  .barcode-svg {
+    height: 5mm !important;
+  }
+
+  .barcode-text {
+    font-size: 7px !important;
+    letter-spacing: 2px !important;
+  }
+}
+
+
+/* ===== バーコード長さ・2次元バーコード調整 ===== */
+.qr canvas {
+  width: 34px !important;
+  height: 34px !important;
+  image-rendering: pixelated;
+  background:#fff;
+}
+
+.barcode-svg {
+  width: 45mm !important;
+  max-width: 45mm !important;
+}
+
+@media print {
+  .barcode-svg {
+    width: 45mm !important;
+    max-width: 45mm !important;
+  }
+
+  .qr canvas {
+    width: 8mm !important;
+    height: 8mm !important;
+  }
+}
+
+
+/* ===== 印刷見やすさ強化：12行・文字大きめ ===== */
+.report-table th {
+  font-size: 9.5px !important;
+  padding: 2.2px 2px !important;
+}
+
+.report-table td {
+  font-size: 10px !important;
+  padding: 2.3px 2px !important;
+  height: 6.2mm !important;
+}
+
+.report-table .small {
+  font-size: 8.5px !important;
+}
+
+.top-cell,
+.info-cell {
+  font-size: 10px !important;
+}
+
+.caption {
+  font-size: 8px !important;
+}
+
+.total-row,
+.total-cell {
+  font-size: 10px !important;
+}
+
+/* QRコードは読み取り優先で大きく、白余白あり */
+.qr {
+  width: 17mm !important;
+  height: 17mm !important;
+  padding: 1.5mm !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+}
+
+.qr canvas {
+  width: 14mm !important;
+  height: 14mm !important;
+  image-rendering: pixelated;
+  background: #fff !important;
+}
+
+.header {
+  min-height: 18mm !important;
+}
+
+.title {
+  font-size: 20px !important;
+}
+
+@media print {
+  .report-table th {
+    font-size: 9.5px !important;
+  }
+  .report-table td {
+    font-size: 10px !important;
+    height: 6.2mm !important;
+  }
+  .qr {
+    width: 17mm !important;
+    height: 17mm !important;
+    padding: 1.5mm !important;
+  }
+  .qr canvas {
+    width: 14mm !important;
+    height: 14mm !important;
+  }
+}
+
+
+/* ===== 再調整：明細表を本当に大きくする ===== */
+.sheet {
+  padding-top: 16px !important;
+  padding-bottom: 6px !important;
+}
+
+.detail-table {
+  font-size: 14px !important;
+  table-layout: fixed !important;
+}
+
+.detail-table th {
+  height: 27px !important;
+  font-size: 13px !important;
+  line-height: 1.15 !important;
+  padding: 3px 2px !important;
+  font-weight: 900 !important;
+}
+
+.detail-table td {
+  height: 31px !important;
+  font-size: 14px !important;
+  line-height: 1.15 !important;
+  padding: 3px 3px !important;
+  vertical-align: middle !important;
+}
+
+.detail-table .remarks {
+  font-size: 13px !important;
+  padding-left: 5px !important;
+}
+
+.detail-table .shape {
+  font-size: 12.5px !important;
+  line-height: 1.1 !important;
+}
+
+.blank-space {
+  height: 18px !important;
+}
+
+.photo-grid {
+  height: 365px !important;
+}
+
+.total {
+  height: 44px !important;
+  font-size: 26px !important;
+}
+
+.footer {
+  bottom: 5px !important;
+}
+
+@media print {
+  .sheet {
+    padding-top: 4mm !important;
+    padding-bottom: 2mm !important;
+  }
+
+  .detail-table th {
+    height: 7mm !important;
+    font-size: 13px !important;
+    padding: 1.2mm .6mm !important;
+  }
+
+  .detail-table td {
+    height: 8.1mm !important;
+    font-size: 14px !important;
+    padding: 1.2mm .8mm !important;
+  }
+
+  .detail-table .remarks {
+    font-size: 13px !important;
+  }
+
+  .detail-table .shape {
+    font-size: 12.5px !important;
+  }
+
+  .blank-space {
+    height: 5mm !important;
+  }
+
+  .photo-grid {
+    height: 96mm !important;
+  }
+
+  .total {
+    height: 12mm !important;
+    font-size: 26px !important;
+  }
+}
+
+
+/* ===== 備考を少し狭め、貨物形状を広げる ===== */
+.detail-table th:nth-child(1),
+.detail-table td:nth-child(1) { width: 6% !important; }
+
+.detail-table th:nth-child(2),
+.detail-table td:nth-child(2),
+.detail-table th:nth-child(3),
+.detail-table td:nth-child(3),
+.detail-table th:nth-child(4),
+.detail-table td:nth-child(4),
+.detail-table th:nth-child(5),
+.detail-table td:nth-child(5) { width: 8% !important; }
+
+.detail-table th:nth-child(6),
+.detail-table td:nth-child(6) { width: 10% !important; }
+
+.detail-table th:nth-child(7),
+.detail-table td:nth-child(7) { width: 28% !important; }
+
+.detail-table th:nth-child(8),
+.detail-table td:nth-child(8) { width: 24% !important; }
+
+.detail-table .remarks {
+  font-size: 13px !important;
+  word-break: break-word !important;
+}
+
+.detail-table .shape {
+  font-size: 12px !important;
+  line-height: 1.05 !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  letter-spacing: -0.3px !important;
+}
+
+/* 画面プレビュー・PDF生成どちらも同じ配分 */
+@media print {
+  .detail-table th:nth-child(7),
+  .detail-table td:nth-child(7) { width: 28% !important; }
+
+  .detail-table th:nth-child(8),
+  .detail-table td:nth-child(8) { width: 24% !important; }
+
+  .detail-table .shape {
+    font-size: 12px !important;
+    line-height: 1.05 !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    letter-spacing: -0.3px !important;
+  }
+}
+
+
+/* ===== 上部レイアウト再調整：代理店名・Shipper拡大、担当者欄の線切れ修正 ===== */
+.head-right {
+  display: grid !important;
+  grid-template-rows: 1fr 1fr !important;
+  height: 100% !important;
+  border-left: 2px solid #111 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.head-line {
+  display: grid !important;
+  grid-template-columns: 34% 66% !important;
+  align-items: stretch !important;
+  min-height: 26px !important;
+  height: 100% !important;
+  border-bottom: 2px solid #111 !important;
+  box-sizing: border-box !important;
+}
+
+.head-line:last-child {
+  border-bottom: 0 !important;
+}
+
+.head-label {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-right: 2px solid #111 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  box-sizing: border-box !important;
+}
+
+.head-value {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.05 !important;
+  padding: 1px 3px !important;
+  box-sizing: border-box !important;
+}
+
+/* 代理店名・Shipperを大きく */
+.top-cell {
+  padding: 5px 7px !important;
+  min-height: 43px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+}
+
+.top-cell .caption,
+.caption {
+  font-size: 10.5px !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  margin-bottom: 3px !important;
+}
+
+#outAgent,
+#outShipper {
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+  display: inline-block !important;
+}
+
+#outXrayAt,
+#outInboundNo {
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+}
+
+/* QRは読み取り優先：外枠内で大きめ、白余白あり */
+.qr {
+  width: 20mm !important;
+  height: 20mm !important;
+  padding: 2mm !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+}
+
+.qr canvas,
+.qr img {
+  width: 16mm !important;
+  height: 16mm !important;
+  display: block !important;
+  image-rendering: pixelated;
+  background: #fff !important;
+}
+
+.header {
+  min-height: 21mm !important;
+}
+
+@media print {
+  .head-right {
+    border-left: .55mm solid #111 !important;
+    overflow: hidden !important;
+  }
+
+  .head-line {
+    min-height: 6.8mm !important;
+    border-bottom: .55mm solid #111 !important;
+  }
+
+  .head-label {
+    border-right: .55mm solid #111 !important;
+    font-size: 12px !important;
+  }
+
+  .head-value {
+    font-size: 12px !important;
+  }
+
+  .top-cell {
+    min-height: 11mm !important;
+    padding: 1.4mm 1.8mm !important;
+    font-size: 15px !important;
+  }
+
+  .top-cell .caption,
+  .caption {
+    font-size: 10.5px !important;
+    margin-bottom: .7mm !important;
+  }
+
+  #outAgent,
+  #outShipper {
+    font-size: 17px !important;
+  }
+
+  #outXrayAt,
+  #outInboundNo {
+    font-size: 12.5px !important;
+  }
+
+  .qr {
+    width: 20mm !important;
+    height: 20mm !important;
+    padding: 2mm !important;
+  }
+
+  .qr canvas,
+  .qr img {
+    width: 16mm !important;
+    height: 16mm !important;
+  }
+
+  .header {
+    min-height: 21mm !important;
+  }
+}
+
+
+/* ===== タイトル・入庫担当者名をさらに大きく ===== */
+.title {
+  font-size: 28px !important;
+  font-weight: 900 !important;
+  letter-spacing: 1px !important;
+}
+
+/* 右上の値欄全体 */
+.head-value {
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+/* 入庫担当者の名前だけさらに大きく */
+.head-line:nth-child(2) .head-value,
+#outStaff {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  letter-spacing: .5px !important;
+}
+
+/* 作成日時は少しだけ大きく、担当者名より控えめ */
+.head-line:nth-child(1) .head-value,
+#outCreatedAt {
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+@media print {
+  .title {
+    font-size: 28px !important;
+    font-weight: 900 !important;
+    letter-spacing: .8px !important;
+  }
+
+  .head-value {
+    font-size: 13px !important;
+    font-weight: 900 !important;
+  }
+
+  .head-line:nth-child(2) .head-value,
+  #outStaff {
+    font-size: 16px !important;
+    font-weight: 900 !important;
+  }
+
+  .head-line:nth-child(1) .head-value,
+  #outCreatedAt {
+    font-size: 13px !important;
+    font-weight: 900 !important;
+  }
+}
+
+
+/* ===== No.手入力対応・列幅再配分 ===== */
+.detail-table th:nth-child(1),
+.detail-table td:nth-child(1) { width: 12% !important; }
+
+.detail-table th:nth-child(2),
+.detail-table td:nth-child(2),
+.detail-table th:nth-child(3),
+.detail-table td:nth-child(3),
+.detail-table th:nth-child(4),
+.detail-table td:nth-child(4),
+.detail-table th:nth-child(5),
+.detail-table td:nth-child(5) { width: 8% !important; }
+
+.detail-table th:nth-child(6),
+.detail-table td:nth-child(6) { width: 10% !important; }
+
+.detail-table th:nth-child(7),
+.detail-table td:nth-child(7) { width: 22% !important; }
+
+.detail-table th:nth-child(8),
+.detail-table td:nth-child(8) { width: 24% !important; }
+
+.detail-table .cargo-no,
+.detail-table td:nth-child(1) {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  font-size: 12.5px !important;
+  letter-spacing: -0.4px !important;
+  padding-left: 1px !important;
+  padding-right: 1px !important;
+}
+
+.detail-table .remarks,
+.detail-table td:nth-child(7) {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  font-size: 11.5px !important;
+  line-height: 1.05 !important;
+}
+
+.detail-table .shape,
+.detail-table td:nth-child(8) {
+  font-size: 11.8px !important;
+  line-height: 1.05 !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  letter-spacing: -0.4px !important;
+}
+
+input[id^="no"] { font-weight: 700; }
+
+@media print {
+  .detail-table .cargo-no,
+  .detail-table td:nth-child(1) {
+    white-space: nowrap !important;
+    font-size: 12.5px !important;
+    letter-spacing: -0.4px !important;
+  }
+  .detail-table .remarks,
+  .detail-table td:nth-child(7) {
+    font-size: 11.5px !important;
+    line-height: 1.05 !important;
+  }
+  .detail-table .shape,
+  .detail-table td:nth-child(8) {
+    font-size: 11.8px !important;
+    line-height: 1.05 !important;
+  }
+}
+
+
+/* ===== No.数字のみ・空欄OK ===== */
+input[id^="no"] {
+  font-weight: 700;
+}
+
+.detail-table .cargo-no,
+.detail-table td:nth-child(1) {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  font-size: 13px !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* 数字のみになったのでNo列を少しだけ戻し、備考に少し返す */
+.detail-table th:nth-child(1),
+.detail-table td:nth-child(1) {
+  width: 10% !important;
+}
+
+.detail-table th:nth-child(7),
+.detail-table td:nth-child(7) {
+  width: 24% !important;
+}
+
+@media print {
+  .detail-table .cargo-no,
+  .detail-table td:nth-child(1) {
+    font-size: 13px !important;
+    letter-spacing: -0.2px !important;
+  }
+}
+
+
+/* ===== No.欄：数字＋ハイフン対応 ===== */
+.detail-table .cargo-no,
+.detail-table td:nth-child(1) {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  font-size: 12.2px !important;
+  letter-spacing: -0.45px !important;
+}
+
+@media print {
+  .detail-table .cargo-no,
+  .detail-table td:nth-child(1) {
+    font-size: 12.2px !important;
+    letter-spacing: -0.45px !important;
+  }
+}
+
+
+/* ===== PDF反映安定化・明細セル表示補強 ===== */
+.detail-table .cargo-no,
+.detail-table td:nth-child(1) {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  font-size: 12px !important;
+  letter-spacing: -0.35px !important;
+}
+
+.detail-table .remarks,
+.detail-table td:nth-child(7) {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+.detail-table .shape,
+.detail-table td:nth-child(8) {
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
+@media print {
+  .detail-table .cargo-no,
+  .detail-table td:nth-child(1) {
+    font-size: 12px !important;
+    letter-spacing: -0.35px !important;
+  }
+}
+
+
+/* ===== 明細反映・X-RAY結果・初期表示の補強 ===== */
+.xray-result {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+
+.detail-table .cargo-no,
+.detail-table td:nth-child(1) {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  font-size: 12px !important;
+  letter-spacing: -0.35px !important;
+}
+
+.detail-table .remarks,
+.detail-table td:nth-child(7) {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+.detail-table .shape,
+.detail-table td:nth-child(8) {
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
+
+/* ===== 全体点検後の補強 ===== */
+.xray-result {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+
+.detail-table .cargo-no,
+.detail-table td:nth-child(1) {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  font-size: 12px !important;
+  letter-spacing: -0.35px !important;
+}
+
+.detail-table .remarks,
+.detail-table td:nth-child(7) {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+.detail-table .shape,
+.detail-table td:nth-child(8) {
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
+
+/* ===== 写真の削除・撮り直しボタン ===== */
+.photo-actions {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 14px;
+}
+
+.photo-actions button {
+  flex: 1;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.photo-retake {
+  background: #0f172a;
+  color: #fff;
+}
+
+.photo-clear {
+  background: #b91c1c;
+  color: #fff;
+}
+
+@media print {
+  .photo-actions {
+    display: none !important;
+  }
+}
+
+
+
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <div class="hud">
-    <div>Score: <span id="score">0</span></div>
-    <div>Life: <span id="life">3</span></div>
-    <button id="restart" title="RでもOK">Restart</button>
-    <button id="sound">🔇 Sound OFF</button>
-    <span class="small" id="soundHint">（音はボタン押して有効化）</span>
-  </div>
-  <div class="hint">
-    スマホ: 画面ドラッグで移動（押してる間は連射） / PC: 矢印移動 + Space<br/>
-    ※iPhoneは音を鳴らすのに最初のタップが必要
-  </div>
+<div class="app">
+<div class="card">
+<h1>📦 入庫報告書フォーム</h1>
+<p class="note">X-RAY時間は「時」と「分」を別々に選択できます。分は1分単位です。QRコードは入庫番号から英字を抜いた数字部分だけを記録します。PDFは印刷経由ではなく、A4 1ページのPDFファイルとして直接作成します。QRコードは読み取りやすさ優先で生成します。内容は入庫番号から英字を抜いた数字部分だけです。</p>
 
-  <div id="wrap">
-    <canvas id="c" width="420" height="720"></canvas>
-  </div>
+
+
+<h2>基本情報</h2>
+<div class="row">
+<div><label>入庫担当者</label><input id="staff" oninput="updateReport()"></div>
+<div><label>作成日時</label><input id="createdAtText" readonly></div>
+</div>
+
+<label>代理店名</label>
+<select id="agentSelect" onchange="onAgentChange()"></select>
+
+<div class="row">
+<div><label>代理店コード</label><input id="agentCode" readonly></div>
+<div><label>入庫No 自動</label><input id="inboundNo" readonly placeholder="代理店選択後に自動作成"></div>
+</div>
+
+<div class="row3">
+<div><label>X-RAY日付</label><input id="xrayDate" type="date" onchange="updateXrayText()"></div>
+<div><label>X-RAY時</label><select id="xrayHour" onchange="updateXrayText()"></select></div>
+<div><label>X-RAY分</label><select id="xrayMinute" onchange="updateXrayText()"></select></div>
+</div>
+
+<div class="row">
+<div>
+<div>
+<label>X-RAY結果</label>
+<select id="xrayResult" onchange="updateReport()">
+  <option value="">選択してください</option>
+  <option value="OK">OK</option>
+  <option value="NG">NG</option>
+  <option value="未実施">未実施</option>
+</select>
+</div>
+
+<label>Shipper / お客様名</label><input id="shipper" placeholder="お客様名" oninput="updateReport()"></div>
+<div><label>X-RAY表示</label><input id="xrayAtText" readonly></div>
+</div>
+
+<div class="row">
+<div><label>MAWB No.</label><input id="mawb" oninput="updateReport()"></div>
+<div><label>HAWB No.</label><input id="hawb" oninput="updateReport()"></div>
+</div>
+
+<h2>貨物明細</h2>
+<p class="note">No.は必要な場合のみ入力できます。No.は数字・ハイフン「-」・スペース・カンマ「,」・ピリオド「.」・コロン「:」を入力できます。L / W / H / 個数 / 重量は、数字と小数点「.」だけ入力できます。スマホでは数字キーボードが出ます。重量欄はその行の総重量として入力します。合計重量は各行の重量を足して自動計算します。</p>
+<div id="items"></div>
+<button type="button" class="dark" onclick="addItem('','','','','','','カートン','')">明細行を追加</button>
+
+<h2>写真 6枚</h2>
+<p class="note">各写真は選択時に150KB前後を目標に圧縮します。Androidの大きい写真も自動で縮小します。間違えた写真は削除または撮り直しできます。</p>
+<div class="row">
+<div><label>写真①</label><input id="photo1" type="file" accept="image/*" onchange="compressPhoto(this,1)"><div id="photoStatus1" class="photo-status"></div>
+<div class="photo-actions">
+  <button type="button" class="photo-retake" onclick="retakePhoto(1)">撮り直し</button>
+  <button type="button" class="photo-clear" onclick="clearPhoto(1)">削除</button>
+</div>
+</div>
+<div><label>写真②</label><input id="photo2" type="file" accept="image/*" onchange="compressPhoto(this,2)"><div id="photoStatus2" class="photo-status"></div>
+<div class="photo-actions">
+  <button type="button" class="photo-retake" onclick="retakePhoto(2)">撮り直し</button>
+  <button type="button" class="photo-clear" onclick="clearPhoto(2)">削除</button>
+</div>
+</div>
+</div>
+<div class="row">
+<div><label>写真③</label><input id="photo3" type="file" accept="image/*" onchange="compressPhoto(this,3)"><div id="photoStatus3" class="photo-status"></div>
+<div class="photo-actions">
+  <button type="button" class="photo-retake" onclick="retakePhoto(3)">撮り直し</button>
+  <button type="button" class="photo-clear" onclick="clearPhoto(3)">削除</button>
+</div>
+</div>
+<div><label>写真④</label><input id="photo4" type="file" accept="image/*" onchange="compressPhoto(this,4)"><div id="photoStatus4" class="photo-status"></div>
+<div class="photo-actions">
+  <button type="button" class="photo-retake" onclick="retakePhoto(4)">撮り直し</button>
+  <button type="button" class="photo-clear" onclick="clearPhoto(4)">削除</button>
+</div>
+</div>
+</div>
+<div class="row">
+<div><label>写真⑤</label><input id="photo5" type="file" accept="image/*" onchange="compressPhoto(this,5)"><div id="photoStatus5" class="photo-status"></div>
+<div class="photo-actions">
+  <button type="button" class="photo-retake" onclick="retakePhoto(5)">撮り直し</button>
+  <button type="button" class="photo-clear" onclick="clearPhoto(5)">削除</button>
+</div>
+</div>
+<div><label>写真⑥</label><input id="photo6" type="file" accept="image/*" onchange="compressPhoto(this,6)"><div id="photoStatus6" class="photo-status"></div>
+<div class="photo-actions">
+  <button type="button" class="photo-retake" onclick="retakePhoto(6)">撮り直し</button>
+  <button type="button" class="photo-clear" onclick="clearPhoto(6)">削除</button>
+</div>
+</div>
+</div>
+
+<div class="action-area">
+<button type="button" onclick="showPdfGuide()">PDFを作成 / 共有</button>
+<button type="button" class="green" onclick="saveDraftNow()">下書きを保存</button>
+<button type="button" class="dark" onclick="restoreDraftNow()">下書きを復元</button>
+<button type="button" class="red" onclick="clearDraftNow()">下書きを削除</button>
+  <p class="small" id="draftStatus">入力内容は自動で下書き保存されます。写真は保存対象外です。</p>
+  <p class="small">入力が終わったら、ここからPDFを作成して共有できます。入力内容はPDF作成時に自動反映されます。</p>
+</div>
+</div>
+
+<div class="sheet-wrap">
+<div class="sheet">
+<div class="header">
+<div class="qr"><img id="qrImg" alt="QR" crossorigin="anonymous" referrerpolicy="no-referrer"></div>
+<div class="title">入庫報告書</div>
+<div class="head-right">
+<div class="head-line"><div class="head-label">作成日時</div><div class="head-value" id="outCreatedAt"></div></div>
+<div class="head-line"><div class="head-label">入庫担当者</div><div class="head-value" id="outStaff"></div></div>
+</div>
+</div>
+
+<div class="logo-row">
+<div class="logo">JAL CARGO</div>
+<div class="logo-side"></div>
+</div>
+
+<div class="top-grid">
+<div class="top-row">
+<div class="top-cell"><div class="caption">代理店名</div><span id="outAgent"></span></div>
+<div class="top-cell"><div class="caption">X線検査日時</div><span id="outXrayAt"></span><br><span id="outXrayResult" class="xray-result"></span></div>
+</div>
+<div class="top-row">
+<div class="top-cell"><div class="caption">Shipper</div><span id="outShipper"></span></div>
+<div class="top-cell"><div class="caption">入庫No</div><span id="outInboundNo"></span></div>
+</div>
+</div>
+
+<div class="mawb-row">
+<div class="mawb-cell"><span class="mawb-label">MAWB No.　</span><span id="outMawb"></span></div>
+<div class="mawb-cell"><span class="mawb-label">HAWB No.　</span><span id="outHawb"></span></div>
+</div>
+
+<table class="detail-table">
+<thead><tr><th style="width:10%">No</th><th style="width:8%">L</th><th style="width:8%">W</th><th style="width:8%">H</th><th style="width:8%">個数</th><th style="width:10%">重量</th><th style="width:24%">備考</th><th style="width:24%">貨物形状</th></tr></thead>
+<tbody id="outRows"></tbody>
+</table>
+
+<div class="total"><div>合計個数</div><div id="outTotalPieces">0個</div><div>合計重量</div><div id="outTotalWeight">0.0Kg</div></div>
+
+<div class="photo-grid">
+<div class="photo-slot" id="photoSlot1"><span class="photo-name">写真 ①</span></div>
+<div class="photo-slot" id="photoSlot2"><span class="photo-name">写真 ②</span></div>
+<div class="photo-slot" id="photoSlot3"><span class="photo-name">写真 ③</span></div>
+<div class="photo-slot" id="photoSlot4"><span class="photo-name">写真 ④</span></div>
+<div class="photo-slot" id="photoSlot5"><span class="photo-name">写真 ⑤</span></div>
+<div class="photo-slot" id="photoSlot6"><span class="photo-name">写真 ⑥</span></div>
+</div>
+
+<div class="blank-space"></div>
+<div class="footer">
+<svg id="barcodeSvg" class="barcode-svg" viewBox="0 0 300 30" xmlns="http://www.w3.org/2000/svg" aria-label="barcode"></svg>
+<div class="barcode-text" id="outBarcode"></div>
+
+</div>
+</div>
+</div>
+</div>
 
 <script>
-(() => {
-  const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d");
-  const scoreEl = document.getElementById("score");
-  const lifeEl  = document.getElementById("life");
-  const restartBtn = document.getElementById("restart");
-  const soundBtn = document.getElementById("sound");
-  const soundHint = document.getElementById("soundHint");
+var itemCount=0;
+var selectedAgentIndex=0;
+var currentDate=new Date();
 
-  const W = canvas.width, H = canvas.height;
+var agents=[
+{code:"IEC",name:"インターナショナルエクスプレス株式会社"},
+{code:"VHF",name:"ロジスティードエクスプレス株式会社"},
+{code:"OCS",name:"株式会社OCS"},
+{code:"MLG",name:"商船三井ロジスティクス株式会社"},
+{code:"MFJ",displayCode:"MFJ",name:"MAINFREIGHT"},
+{code:"DSV",name:"ディエスヴィ・エアーシー株式会社"},
+{code:"KAD",displayCode:"KKS",name:"ケイラインロジスティックス株式会社"},
+{code:"SSA",name:"株式会社住友倉庫"},
+{code:"YGF",displayCode:"YTJ",name:"ヤマト運輸株式会社"},
+{code:"KAF",name:"ケイヒン航空株式会社"},
+{code:"NNR",name:"西日本鉄道株式会社"},
+{code:"YLK",displayCode:"YJP",name:"郵船ロジスティクス株式会社"},
+{code:"KAD",name:"ケイラインロジスティックス株式会社"},
+{code:"YLK",name:"郵船ロジスティクス株式会社"},
+{code:"SGJ",name:"SGHグローバル・ジャパン株式会社"},
+{code:"KNJ",name:"キューネアンド・ナーゲル株式会社"},
+{code:"EIJ",name:"エクスペダイターズ・ジャパン株式会社"},
+{code:"FKT",name:"福山通運株式会社"},
+{code:"KSC",name:"コクサイエアロマリン株式会社"},
+{code:"ATA",name:"株式会社アルプス物流"},
+{code:"JPT",name:"ジュピター・ジャパン株式会社"},
+{code:"UNI",name:"三菱倉庫株式会社"},
+{code:"UCI",name:"ユーシーアイエアフレイトジャパン株式会社"},
+{code:"KNC",name:"鴻池運輸株式会社"},
+{code:"YGF",name:"ヤマト運輸株式会社"},
+{code:"KWE",name:"株式会社近鉄エクスプレス"},
+{code:"MWT",name:"名鉄ワールドトランスポート株式会社"},
+{code:"TAD",name:"泰運商会"},
+{code:"APEX",name:"株式会社エイペックスインターナショナル"},
+{code:"JLI",name:"株式会社ロジ・レックス"},
+{code:"TSC",name:"辰日商会"},
+{code:"SNO",name:"佐野運輸株式会社"},
+{code:"JIF",name:"ジャスフォワーディングジャパン株式会社"},
+{code:"KSK",name:"京神倉庫株式会社"}
+];
 
-  // ====== Utils ======
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const rand  = (a, b) => a + Math.random() * (b - a);
-  const now   = () => performance.now();
+var shapeOptions=["カートン","パレット","木箱（燻蒸印あり）","木箱（燻蒸印なし）","木枠（燻蒸印あり）","木枠（燻蒸印なし）","ロール","ベール","ビニール","トライウォール","紙袋","ドラム","ファイバードラム","ジェリ缶","フレコンバッグ","４Gカートン"];
 
-  // ====== Sound (Web Audio, no external files) ======
-  let audioCtx = null;
-  let master = null;
-  let bgmGain = null;
-  let sfxGain = null;
-  let soundEnabled = false;
-  let bgmTimer = null;
-  let bgmStep = 0;
+function g(id){return document.getElementById(id)}
+function v(id){var e=g(id);return e?e.value:""}
+function pad(n){return("0"+n).slice(-2)}
+function codeOf(a){return a.displayCode||a.code}
+function selectedAgent(){return selectedAgentIndex>=0 ? agents[selectedAgentIndex] : {code:"",name:""}}
 
-  function ensureAudio() {
-    if (audioCtx) return;
-    const AC = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new AC();
-    master = audioCtx.createGain();
-    bgmGain = audioCtx.createGain();
-    sfxGain = audioCtx.createGain();
+function makeDateText(d){var w=["日","月","火","水","木","金","土"][d.getDay()];return d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日 "+w+"曜日 "+pad(d.getHours())+"時"+pad(d.getMinutes())+"分"}
+function makeTimePart(d){return String(d.getFullYear())+pad(d.getMonth()+1)+pad(d.getDate())+pad(d.getHours())+pad(d.getMinutes())}
+function buildInboundNo(){var c=codeOf(selectedAgent());return c ? c+makeTimePart(currentDate) : ""}
+function formatDateForInput(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 
-    // volumes
-    master.gain.value = 0.8;
-    bgmGain.gain.value = 0.20;
-    sfxGain.gain.value = 0.45;
+function setupAgents(){
+ var sel=g("agentSelect");sel.innerHTML="";
 
-    bgmGain.connect(master);
-    sfxGain.connect(master);
-    master.connect(audioCtx.destination);
+ var blank=document.createElement("option");
+ blank.value="";
+ blank.text="選択してください";
+ sel.appendChild(blank);
+
+ for(var i=0;i<agents.length;i++){
+  var opt=document.createElement("option");
+  opt.value=i;
+  opt.text=codeOf(agents[i])+"　"+agents[i].name;
+  sel.appendChild(opt);
+ }
+
+ selectedAgentIndex=-1;
+ sel.value="";
+ onAgentChange();
+}
+function setupTimeSelects(){
+ var hsel=g("xrayHour");hsel.innerHTML="";
+ for(var h=0;h<24;h++){var o=document.createElement("option");o.value=pad(h);o.text=pad(h)+"時";hsel.appendChild(o)}
+ var msel=g("xrayMinute");msel.innerHTML="";
+ for(var m=0;m<60;m++){var om=document.createElement("option");om.value=pad(m);om.text=pad(m)+"分";msel.appendChild(om)}
+}
+function onAgentChange(){
+ var val=v("agentSelect");
+ if(val===""){
+  selectedAgentIndex=-1;
+  g("agentCode").value="";
+  g("inboundNo").value="";
+ }else{
+  selectedAgentIndex=Number(val);
+  g("agentCode").value=codeOf(selectedAgent());
+  g("inboundNo").value=buildInboundNo();
+ }
+ updateReport();
+}
+function updateXrayText(){
+ var date=v("xrayDate"),hour=v("xrayHour"),minute=v("xrayMinute");
+ if(date&&hour!==""&&minute!==""){
+  var p=date.split("-");
+  g("xrayAtText").value=p[0]+"年"+Number(p[1])+"月"+Number(p[2])+"日 "+hour+"時"+minute+"分";
+ }else g("xrayAtText").value="";
+ updateReport();
+}
+
+
+
+function sanitizeDigitsInput(el){
+  if(!el) return;
+  var before = el.value || "";
+  // No.欄：数字・ハイフン・スペース・カンマ・ピリオド・コロンを許可
+  var cleaned = before.replace(/[^0-9\- ,\.:]/g, "");
+  cleaned = cleaned.replace(/\s+/g, " ");
+  if(before !== cleaned){
+    el.value = cleaned;
+  }
+}
+
+function sanitizeDecimalInput(el){
+  if(!el) return;
+  var before = el.value || "";
+  var cleaned = before.replace(/[^0-9.]/g, "");
+  var firstDot = cleaned.indexOf(".");
+  if(firstDot !== -1){
+    cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  }
+  if(before !== cleaned){
+    el.value = cleaned;
+  }
+}
+
+function addItem(no,l,w,h,pieces,weight,shape,remarks){
+ itemCount++;
+ no=no||"";
+ l=l||"";
+ w=w||"";
+ h=h||"";
+ pieces=pieces||"";
+ weight=weight||"";
+ shape=shape||"カートン";
+ remarks=remarks||"";
+
+ var box=document.createElement("div");
+ box.className="item";
+ box.id="item"+itemCount;
+
+ var opts="";
+ for(var i=0;i<shapeOptions.length;i++){
+  var s=shapeOptions[i];
+  opts += '<option value="'+s+'" '+(s===shape?'selected':'')+'>'+s+'</option>';
+ }
+
+ box.innerHTML =
+ '<div class="item-title"><strong>明細 '+itemCount+'</strong><button type="button" class="danger" onclick="removeItem('+itemCount+')">削除</button></div>'
+ + '<div class="row4">'
+ + '<div><label>No.</label><input id="no'+itemCount+'" type="text" inputmode="text" pattern="[0-9\\- ,\\.:]*" value="'+no+'" oninput="sanitizeDigitsInput(this);updateReport()"></div>'
+ + '<div><label>L</label><input id="l'+itemCount+'" type="text" inputmode="decimal" pattern="[0-9.]*" value="'+l+'" oninput="sanitizeDecimalInput(this);updateReport()"></div>'
+ + '<div><label>W</label><input id="w'+itemCount+'" type="text" inputmode="decimal" pattern="[0-9.]*" value="'+w+'" oninput="sanitizeDecimalInput(this);updateReport()"></div>'
+ + '<div><label>H</label><input id="h'+itemCount+'" type="text" inputmode="decimal" pattern="[0-9.]*" value="'+h+'" oninput="sanitizeDecimalInput(this);updateReport()"></div>'
+ + '</div>'
+ + '<div class="row4">'
+ + '<div><label>個数</label><input id="p'+itemCount+'" type="text" inputmode="decimal" pattern="[0-9.]*" value="'+pieces+'" oninput="sanitizeDecimalInput(this);updateReport()"></div>'
+ + '<div><label>重量kg</label><input id="kg'+itemCount+'" type="text" inputmode="decimal" pattern="[0-9.]*" value="'+weight+'" oninput="sanitizeDecimalInput(this);updateReport()"></div>'
+ + '<div><label>貨物形状</label><select id="shape'+itemCount+'" onchange="updateReport()">'+opts+'</select></div>'
+ + '<div><label>備考</label><input id="remarks'+itemCount+'" value="'+remarks+'" oninput="updateReport()"></div>'
+ + '</div>';
+
+ g("items").appendChild(box);
+ updateReport();
+}
+
+function removeItem(no){
+ var el=g("item"+no);
+ if(el) el.remove();
+ updateReport();
+}
+
+function deleteItem(no){removeItem(no)}
+function getActiveItemNos(){var cards=document.querySelectorAll(".item-card"),nos=[];for(var i=0;i<cards.length;i++)nos.push(Number(cards[i].getAttribute("data-item-no")));return nos}
+
+var CODE128_PATTERNS=["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
+function extractBarcodeDigits(inbound){
+  var m=String(inbound||"").match(/(\d+)/);
+  return m?m[1]:"";
+}
+function renderBarcodeDigits(digits){
+  var svg=g("barcodeSvg");
+  if(!svg) return;
+  svg.innerHTML="";
+  if(!digits){
+    svg.setAttribute("viewBox","0 0 300 30");
+    return;
+  }
+  var enc=digits;
+  if(enc.length%2===1) enc='0'+enc;
+  var codes=[105];
+  for(var i=0;i<enc.length;i+=2){ codes.push(parseInt(enc.substr(i,2),10)); }
+  var checksum=105;
+  for(var j=1;j<codes.length;j++){ checksum += codes[j]*j; }
+  checksum = checksum % 103;
+  codes.push(checksum);
+  codes.push(106);
+
+  var quiet=10, x=quiet, height=26, total=quiet*2;
+  for(var c=0;c<codes.length;c++){
+    var pat=CODE128_PATTERNS[codes[c]];
+    for(var k=0;k<pat.length;k++) total += parseInt(pat[k],10);
+  }
+  svg.setAttribute("viewBox", "0 0 "+total+" 30");
+  svg.setAttribute("preserveAspectRatio","none");
+  var ns='http://www.w3.org/2000/svg';
+  for(var c2=0;c2<codes.length;c2++){
+    var pat2=CODE128_PATTERNS[codes[c2]];
+    for(var p=0;p<pat2.length;p++){
+      var w=parseInt(pat2[p],10);
+      if(p%2===0){
+        var rect=document.createElementNS(ns,'rect');
+        rect.setAttribute('x',x);
+        rect.setAttribute('y',1);
+        rect.setAttribute('width',w);
+        rect.setAttribute('height',height);
+        rect.setAttribute('fill','#111');
+        svg.appendChild(rect);
+      }
+      x += w;
+    }
+  }
+}
+
+function renderQrDigits(digits){
+  digits = String(digits || "").replace(/\D/g, "");
+  var img = g("qrImg");
+  if(!img) return Promise.resolve();
+
+  if(!digits){
+    img.removeAttribute("src");
+    return Promise.resolve();
   }
 
-  function setSound(on) {
-    ensureAudio();
-    soundEnabled = on;
-    if (audioCtx.state === "suspended") audioCtx.resume();
-
-    soundBtn.textContent = on ? "🔊 Sound ON" : "🔇 Sound OFF";
-    soundHint.textContent = on ? "" : "（音はボタン押して有効化）";
-
-    if (on) startBgm();
-    else stopBgm();
-  }
-
-  function blip({freq=440, dur=0.07, type="sine", gain=0.25, toGain=sfxGain, slide=0, noise=false}) {
-    if (!soundEnabled) return;
-    ensureAudio();
-    const t0 = audioCtx.currentTime;
-    const g = audioCtx.createGain();
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-
-    if (noise) {
-      // tiny noise burst
-      const bufferSize = Math.floor(audioCtx.sampleRate * dur);
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/bufferSize, 2);
-      const src = audioCtx.createBufferSource();
-      src.buffer = buffer;
-
-      // filter for "爆発っぽさ"
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.setValueAtTime(1200, t0);
-      filter.frequency.exponentialRampToValueAtTime(180, t0 + dur);
-
-      src.connect(filter);
-      filter.connect(g);
-      g.connect(toGain);
-
-      src.start(t0);
-      src.stop(t0 + dur);
-      return;
+  return new Promise(function(resolve){
+    var done = false;
+    function finish(){
+      if(done) return;
+      done = true;
+      resolve();
     }
 
-    const osc = audioCtx.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t0);
-    if (slide !== 0) osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t0 + dur);
+    img.crossOrigin = "anonymous";
+    img.referrerPolicy = "no-referrer";
 
-    osc.connect(g);
-    g.connect(toGain);
-    osc.start(t0);
-    osc.stop(t0 + dur);
+    img.onload = function(){ finish(); };
+    img.onerror = function(){
+      // QR取得失敗時も空白にならないよう、数字入りの代替表示にする
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220">'
+        + '<rect width="220" height="220" fill="white"/>'
+        + '<rect x="8" y="8" width="204" height="204" fill="white" stroke="black" stroke-width="5"/>'
+        + '<text x="110" y="100" font-size="18" text-anchor="middle" fill="black">QR読込不可</text>'
+        + '<text x="110" y="132" font-size="18" text-anchor="middle" fill="black">'+digits+'</text>'
+        + '</svg>';
+      img.removeAttribute("crossorigin");
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      finish();
+    };
+
+    // QR内容は入庫番号から英字を抜いた数字部分だけ
+    // キャッシュ対策で時刻パラメータを付ける
+    img.src = "https://quickchart.io/qr?text="
+      + encodeURIComponent(digits)
+      + "&size=220&margin=3&ecLevel=H&t="
+      + Date.now();
+
+    // 通信待ちで固まらないための保険
+    setTimeout(finish, 3500);
+  });
+}
+
+function updateReport(){
+ var a=selectedAgent();
+
+ if(g("outCreatedAt")) g("outCreatedAt").innerText=v("createdAtText");
+ if(g("outStaff")) g("outStaff").innerText=v("staff");
+ if(g("outAgent")) g("outAgent").innerText=a.name||"";
+ if(g("outXrayAt")) g("outXrayAt").innerText=v("xrayAtText");
+
+ if(g("outXrayResult")){
+   var xr=v("xrayResult");
+   g("outXrayResult").innerText = xr ? "X-RAY結果：" + xr : "";
+ }
+
+ if(g("outShipper")) g("outShipper").innerText=v("shipper");
+ if(g("outInboundNo")) g("outInboundNo").innerText=v("inboundNo");
+ if(g("outMawb")) g("outMawb").innerText=v("mawb");
+ if(g("outHawb")) g("outHawb").innerText=v("hawb");
+
+ var totalPieces=0;
+ var totalKg=0;
+ var rows="";
+ var boxes=document.querySelectorAll("#items .item");
+
+ boxes.forEach(function(box){
+  var id=(box.id||"").replace("item","");
+  if(!id) return;
+
+  var no=v("no"+id);
+  var l=v("l"+id);
+  var w=v("w"+id);
+  var h=v("h"+id);
+  var pText=v("p"+id);
+  var kgText=v("kg"+id);
+  var shape=v("shape"+id);
+  var remarks=v("remarks"+id);
+
+  var hasData = no || l || w || h || pText || kgText || remarks;
+  if(!hasData) return;
+
+  var p = Number((pText||"0").replace(/[^0-9.]/g,"")) || 0;
+  var kg = Number((kgText||"0").replace(/[^0-9.]/g,"")) || 0;
+
+  totalPieces += p;
+  totalKg += kg;
+
+  rows += "<tr>"
+    + "<td class=\"cargo-no\">"+no+"</td>"
+    + "<td>"+l+"</td>"
+    + "<td>"+w+"</td>"
+    + "<td>"+h+"</td>"
+    + "<td>"+(pText ? pText+"個" : "")+"</td>"
+    + "<td>"+(kgText ? kg.toFixed(1)+"Kg" : "")+"</td>"
+    + "<td class=\"remarks\">"+remarks+"</td>"
+    + "<td class=\"shape\">"+shape+"</td>"
+    + "</tr>";
+ });
+
+ var currentRows=(rows.match(/<tr>/g)||[]).length;
+ for(var i=0;i<12-currentRows;i++){
+  rows += '<tr><td class="cargo-no"></td><td></td><td></td><td></td><td></td><td></td><td class="remarks"></td><td class="shape"></td></tr>';
+ }
+
+ if(g("outRows")) g("outRows").innerHTML=rows;
+ if(g("outTotalPieces")) g("outTotalPieces").innerText=totalPieces+"個";
+ if(g("outTotalWeight")) g("outTotalWeight").innerText=totalKg.toFixed(1)+"Kg";
+
+ var barcodeDigits=extractBarcodeDigits(v("inboundNo"));
+ if(g("outBarcode")) g("outBarcode").innerText=barcodeDigits;
+ renderBarcodeDigits(barcodeDigits);
+ renderQrDigits(barcodeDigits);
+}
+function dataUrlKb(dataUrl){
+  return Math.round((dataUrl.length * 0.75) / 1024);
+}
+
+function fileKb(file){
+  return Math.round(file.size / 1024);
+}
+
+
+function clearPhoto(no){
+  var slot = g("photoSlot"+no);
+  var input = g("photo"+no);
+  var status = g("photoStatus"+no);
+
+  if(slot){
+    var labels = ["","①","②","③","④","⑤","⑥"];
+    slot.innerHTML = '<span class="photo-name">写真 ' + (labels[no] || no) + '</span>';
   }
+  if(input){
+    input.value = "";
+  }
+  if(status){
+    status.innerText = "";
+  }
+  updateReport();
+}
 
-  // SFX
-  const sfx = {
-    shoot() { blip({freq: 760, dur: 0.05, type:"square", gain:0.12, slide:-220}); },
-    hit()   { blip({freq: 220, dur: 0.08, type:"sawtooth", gain:0.18, slide:-120}); },
-    boom()  { blip({dur: 0.18, gain:0.28, noise:true}); },
-    damage(){ blip({freq: 140, dur: 0.16, type:"triangle", gain:0.22, slide:-60}); }
+function retakePhoto(no){
+  var input = g("photo"+no);
+  if(input){
+    input.value = "";
+    input.click();
+  }
+}
+
+function compressPhoto(input,no){
+  if(!input.files || !input.files[0]) return;
+
+  var file = input.files[0];
+  var originalKb = fileKb(file);
+  var status = g("photoStatus"+no);
+  if(status) status.innerText = "圧縮中... 元：約" + originalKb + "KB";
+
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+
+  img.onload = function(){
+    try{
+      var targetKb = 150;      // Androidでもメール添付しやすいように少し強め
+      var maxSide = 1000;      // 大きすぎるAndroid写真を抑える
+      var minSide = 420;
+
+      var srcW = img.naturalWidth || img.width;
+      var srcH = img.naturalHeight || img.height;
+
+      var scale = Math.min(1, maxSide / Math.max(srcW, srcH));
+      var w = Math.max(1, Math.round(srcW * scale));
+      var h = Math.max(1, Math.round(srcH * scale));
+
+      var canvas = document.createElement("canvas");
+      var ctx;
+      var data = "";
+      var kb = 999999;
+      var q = 0.82;
+
+      function drawAndEncode(width,height,quality){
+        canvas.width = width;
+        canvas.height = height;
+        ctx = canvas.getContext("2d", { alpha:false });
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0,0,width,height);
+        ctx.drawImage(img,0,0,width,height);
+        return canvas.toDataURL("image/jpeg", quality);
+      }
+
+      data = drawAndEncode(w,h,q);
+      kb = dataUrlKb(data);
+
+      // まず品質を下げる
+      while(kb > targetKb && q > 0.42){
+        q -= 0.08;
+        data = drawAndEncode(w,h,q);
+        kb = dataUrlKb(data);
+      }
+
+      // それでも大きい場合は寸法も下げる
+      while(kb > targetKb && Math.max(w,h) > minSide){
+        w = Math.round(w * 0.86);
+        h = Math.round(h * 0.86);
+        q = 0.46;
+        data = drawAndEncode(w,h,q);
+        kb = dataUrlKb(data);
+      }
+
+      var slot = g("photoSlot"+no);
+      if(slot){
+        slot.innerHTML = '<img src="'+data+'">';
+      }
+
+      if(status){
+        status.innerText = "元：約" + originalKb + "KB → 圧縮後：約" + kb + "KB";
+      }
+
+      URL.revokeObjectURL(url);
+      updateReport();
+    }catch(err){
+      console.error(err);
+      if(status) status.innerText = "写真圧縮に失敗しました。別の写真で試してください。";
+      URL.revokeObjectURL(url);
+    }
   };
 
-  // BGM: simple step sequencer (sine-ish chiptune)
-  function startBgm() {
-    if (!soundEnabled) return;
-    ensureAudio();
-    if (bgmTimer) return;
+  img.onerror = function(){
+    if(status) status.innerText = "写真を読み込めませんでした。別の写真で試してください。";
+    URL.revokeObjectURL(url);
+  };
 
-    const scale = [0, 3, 5, 7, 10]; // minor pentatonic-ish
-    const base = 220; // A3
-    const pattern = [
-      0, 2, 3, 2,  1, 2, 4, 2,
-      0, 2, 3, 4,  3, 2, 1, 2
-    ];
+  img.src = url;
+}
+async function showPdfGuide(){
+  updateReport();
+  if(!v("agentSelect")){ alert("代理店名を選択してください。"); return; }
+  await renderQrDigits(extractBarcodeDigits(v("inboundNo")));
+  await new Promise(function(resolve){ setTimeout(resolve, 500); });
 
-    bgmStep = 0;
-    bgmTimer = setInterval(() => {
-      if (!soundEnabled) return;
-      const idx = pattern[bgmStep % pattern.length];
-      const semis = scale[idx % scale.length] + (idx >= scale.length ? 12 : 0);
-      const freq = base * Math.pow(2, semis/12);
-
-      // note
-      blip({freq, dur:0.12, type:"sine", gain:0.10, toGain:bgmGain});
-      // soft "kick"
-      if (bgmStep % 4 === 0) blip({freq: 90, dur:0.10, type:"sine", gain:0.08, toGain:bgmGain, slide:-20});
-
-      bgmStep++;
-    }, 140); // tempo
+  if (typeof html2canvas === "undefined" || !window.jspdf) {
+    alert("PDF作成ライブラリを読み込み中です。数秒待ってからもう一度押してください。");
+    return;
   }
 
-  function stopBgm() {
-    if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+  var sheet = document.querySelector(".sheet");
+  if (!sheet) {
+    alert("帳票が見つかりません。");
+    return;
   }
 
-  soundBtn.addEventListener("click", () => setSound(!soundEnabled));
+  var originalTransform = sheet.style.transform;
+  var originalMargin = sheet.style.margin;
+  var originalWidth = sheet.style.width;
+  var originalHeight = sheet.style.height;
 
-  // ====== Game State ======
-  let keys = new Set();
-  let lastT = now();
-  let running = true;
+  try {
+    // 画面用の縮小を解除して、帳票をA4比率で画像化する
+    sheet.style.transform = "none";
+    sheet.style.margin = "0";
+    sheet.style.width = "794px";
+    sheet.style.height = "1123px";
 
-  const player = { x: W/2, y: H-90, r: 14, speed: 320, shootCd: 0, inv: 0 };
-
-  let bullets = [];
-  let enemies = [];
-  let particles = [];
-  let stars = [];
-
-  let score = 0;
-  let life = 3;
-  let wave = 1;
-  let spawnTimer = 0;
-
-  // ====== Touch Controls ======
-  let touchActive = false;
-  let touchX = player.x;
-  let touchY = player.y;
-
-  function canvasPosFromTouch(ev) {
-    const rect = canvas.getBoundingClientRect();
-    const t = ev.touches ? ev.touches[0] : ev;
-    const sx = W / rect.width;
-    const sy = H / rect.height;
-    const x = (t.clientX - rect.left) * sx;
-    const y = (t.clientY - rect.top) * sy;
-    return { x, y };
-  }
-
-  function onTouchStart(ev) {
-    ev.preventDefault();
-    touchActive = true;
-    const p = canvasPosFromTouch(ev);
-    touchX = p.x; touchY = p.y;
-
-    // iOS対策: ここで音を有効化しておくと気持ちよく鳴り始める
-    if (soundEnabled) { ensureAudio(); if (audioCtx.state === "suspended") audioCtx.resume(); }
-  }
-  function onTouchMove(ev) {
-    ev.preventDefault();
-    const p = canvasPosFromTouch(ev);
-    touchX = p.x; touchY = p.y;
-  }
-  function onTouchEnd(ev) {
-    ev.preventDefault();
-    touchActive = false;
-  }
-
-  canvas.addEventListener("touchstart", onTouchStart, { passive: false });
-  canvas.addEventListener("touchmove",  onTouchMove,  { passive: false });
-  canvas.addEventListener("touchend",   onTouchEnd,   { passive: false });
-  canvas.addEventListener("touchcancel",onTouchEnd,   { passive: false });
-  canvas.addEventListener("gesturestart", (e) => e.preventDefault());
-
-  // ====== Background ======
-  function initStars() {
-    stars = Array.from({ length: 90 }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      s: rand(0.6, 2.2),
-      v: rand(18, 80)
-    }));
-  }
-
-  // ====== Reset ======
-  function reset() {
-    bullets = [];
-    enemies = [];
-    particles = [];
-    score = 0;
-    life = 3;
-    wave = 1;
-    spawnTimer = 0;
-    player.x = W / 2;
-    player.y = H - 90;
-    player.shootCd = 0;
-    player.inv = 0;
-    running = true;
-    touchActive = false;
-    scoreEl.textContent = score;
-    lifeEl.textContent  = life;
-    initStars();
-  }
-
-  restartBtn.addEventListener("click", reset);
-
-  // ====== Particles ======
-  function addParticleBurst(x, y, n=14) {
-    for (let i=0;i<n;i++) {
-      particles.push({
-        x, y,
-        vx: rand(-180, 180),
-        vy: rand(-220, 120),
-        r: rand(1.2, 3.2),
-        a: 1,
-        life: rand(0.25, 0.65)
-      });
-    }
-  }
-
-  // ====== Enemies ======
-  function spawnEnemy() {
-    const typeRoll = Math.random();
-    const e = {
-      x: rand(20, W - 20),
-      y: -30,
-      r: 16,
-      hp: 1,
-      vx: rand(-40, 40),
-      vy: rand(80, 150) + wave * 6,
-      spin: rand(-2, 2),
-      ang: rand(0, Math.PI*2),
-      kind: typeRoll < 0.15 ? "bossy" : "normal"
-    };
-    if (e.kind === "bossy") { e.r = 22; e.hp = 3; e.vy = rand(60, 110) + wave * 5; }
-    enemies.push(e);
-  }
-
-  // ====== Input (Keyboard) ======
-  window.addEventListener("keydown", (e) => {
-    if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Space","KeyR"].includes(e.code)) e.preventDefault();
-    keys.add(e.code);
-    if (e.code === "KeyR") reset();
-    // 何かキー押したら音の準備だけしておく（ONなら）
-    if (soundEnabled) { ensureAudio(); if (audioCtx.state === "suspended") audioCtx.resume(); }
-  }, { passive:false });
-
-  window.addEventListener("keyup", (e) => keys.delete(e.code));
-
-  // ====== Collision ======
-  function hitCircle(ax, ay, ar, bx, by, br) {
-    const dx = ax - bx, dy = ay - by;
-    return (dx*dx + dy*dy) <= (ar+br)*(ar+br);
-  }
-
-  // ====== Draw helpers ======
-  function drawShip(x, y, r, inv) {
-    ctx.save();
-    ctx.translate(x, y);
-
-    ctx.globalAlpha = inv ? 0.55 : 1;
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = "rgba(170,220,255,.6)";
-
-    ctx.beginPath();
-    ctx.moveTo(0, -r-10);
-    ctx.lineTo(r+10, r+10);
-    ctx.lineTo(0, r+2);
-    ctx.lineTo(-r-10, r+10);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(160,210,255,.92)";
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.ellipse(0, -5, 7, 10, 0, 0, Math.PI*2);
-    ctx.fillStyle = "rgba(80,140,255,.8)";
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(-8, r+10);
-    ctx.lineTo(0, r+22 + Math.sin(now()/80)*2);
-    ctx.lineTo(8, r+10);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(255,180,80,.85)";
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  function drawEnemy(e) {
-    ctx.save();
-    ctx.translate(e.x, e.y);
-    ctx.rotate(e.ang);
-
-    ctx.shadowBlur = 16;
-    ctx.shadowColor = e.kind === "bossy" ? "rgba(255,120,140,.55)" : "rgba(255,90,110,.35)";
-
-    ctx.beginPath();
-    ctx.moveTo(0, -e.r-6);
-    ctx.lineTo(e.r+8, 0);
-    ctx.lineTo(0, e.r+8);
-    ctx.lineTo(-e.r-8, 0);
-    ctx.closePath();
-
-    ctx.fillStyle = e.kind === "bossy" ? "rgba(255,130,160,.95)" : "rgba(255,90,120,.9)";
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.arc(0, 0, e.kind === "bossy" ? 8 : 6, 0, Math.PI*2);
-    ctx.fillStyle = "rgba(255,240,240,.9)";
-    ctx.fill();
-
-    if (e.kind === "bossy") {
-      ctx.beginPath();
-      ctx.arc(0, 0, e.r+6, 0, Math.PI*2);
-      ctx.strokeStyle = "rgba(255,255,255,.15)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      const p = e.hp / 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, e.r+6, -Math.PI/2, -Math.PI/2 + Math.PI*2*p);
-      ctx.strokeStyle = "rgba(255,255,255,.55)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }
-
-  function drawBullet(b) {
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.shadowBlur = 14;
-    ctx.shadowColor = "rgba(120,255,210,.6)";
-    ctx.beginPath();
-    ctx.roundRect(-2.5, -10, 5, 20, 3);
-    ctx.fillStyle = "rgba(140,255,220,.95)";
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // ====== roundRect polyfill ======
-  if (!ctx.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
-      const rr = Math.min(r, w/2, h/2);
-      this.beginPath();
-      this.moveTo(x+rr, y);
-      this.arcTo(x+w, y, x+w, y+h, rr);
-      this.arcTo(x+w, y+h, x, y+h, rr);
-      this.arcTo(x, y+h, x, y, rr);
-      this.arcTo(x, y, x+w, y, rr);
-      this.closePath();
-      return this;
-    };
-  }
-
-  // ====== Update ======
-  function update(dt) {
-    // stars
-    for (const s of stars) {
-      s.y += s.v * dt;
-      if (s.y > H + 10) { s.y = -10; s.x = Math.random() * W; s.v = rand(18, 80); s.s = rand(0.6, 2.2); }
-    }
-
-    if (!running) return;
-
-    const shootDelay = 0.11;
-    const spawnRate = Math.max(0.18, 0.60 - wave * 0.02);
-
-    // keyboard move
-    let dx = 0, dy = 0;
-    if (keys.has("ArrowLeft")) dx -= 1;
-    if (keys.has("ArrowRight")) dx += 1;
-    if (keys.has("ArrowUp")) dy -= 1;
-    if (keys.has("ArrowDown")) dy += 1;
-
-    const len = Math.hypot(dx, dy) || 1;
-    dx /= len; dy /= len;
-
-    if (dx || dy) {
-      player.x = clamp(player.x + dx * player.speed * dt, 18, W - 18);
-      player.y = clamp(player.y + dy * player.speed * dt, 30, H - 30);
-    }
-
-    // touch follow
-    if (touchActive) {
-      const follow = 10;
-      player.x += (touchX - player.x) * (1 - Math.exp(-follow * dt));
-      player.y += (touchY - player.y) * (1 - Math.exp(-follow * dt));
-      player.x = clamp(player.x, 18, W - 18);
-      player.y = clamp(player.y, 30, H - 30);
-    }
-
-    // shooting
-    const wantShoot = keys.has("Space") || touchActive;
-    player.shootCd -= dt;
-    if (wantShoot && player.shootCd <= 0) {
-      player.shootCd = shootDelay;
-      bullets.push({ x: player.x, y: player.y - 22, vy: -720, r: 5 });
-      addParticleBurst(player.x, player.y - 28, 6);
-      sfx.shoot();
-    }
-
-    // spawn enemies
-    spawnTimer -= dt;
-    if (spawnTimer <= 0) {
-      spawnTimer = spawnRate;
-      spawnEnemy();
-    }
-
-    // bullets
-    bullets.forEach(b => b.y += b.vy * dt);
-    bullets = bullets.filter(b => b.y > -30);
-
-    // enemies
-    enemies.forEach(e => {
-      e.x += e.vx * dt;
-      e.y += e.vy * dt;
-      e.ang += e.spin * dt;
-      if (e.x < 18 || e.x > W - 18) e.vx *= -1;
+    var canvas = await html2canvas(sheet, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      windowWidth: 900,
+      windowHeight: 1300
     });
-    enemies = enemies.filter(e => e.y < H + 60);
 
-    // particles
-    for (const p of particles) {
-      p.life -= dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.vy += 420 * dt;
-      p.a = clamp(p.life / 0.65, 0, 1);
+    var imgData = canvas.toDataURL("image/jpeg", 0.92);
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true
+    });
+
+    // A4 1ページに画像として配置
+    pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
+
+    var inboundNo = v("inboundNo") || "cargo-report";
+    var fileName = inboundNo + ".pdf";
+    var blob = pdf.output("blob");
+    var file = new File([blob], fileName, { type: "application/pdf" });
+
+    // iPhoneでは共有シートを優先
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: "Cargo Report PDF",
+        text: "入庫報告書PDF"
+      });
+    } else {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){
+        window.open(url, "_blank");
+      }, 300);
     }
-    particles = particles.filter(p => p.life > 0);
+  } catch (e) {
+    alert("PDF作成に失敗しました。写真枚数を減らすか、画像サイズを小さくして再試行してください。");
+    console.error(e);
+  } finally {
+    sheet.style.transform = originalTransform;
+    sheet.style.margin = originalMargin;
+    sheet.style.width = originalWidth;
+    sheet.style.height = originalHeight;
+  }
+}
+window.onload=function(){
+ currentDate=new Date();
 
-    // bullet vs enemy
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      const e = enemies[i];
-      for (let j = bullets.length - 1; j >= 0; j--) {
-        const b = bullets[j];
-        if (hitCircle(e.x, e.y, e.r, b.x, b.y, b.r)) {
-          bullets.splice(j, 1);
-          e.hp -= 1;
-          addParticleBurst(b.x, b.y, 10);
-          sfx.hit();
-          if (e.hp <= 0) {
-            enemies.splice(i, 1);
-            score += (e.kind === "bossy") ? 60 : 20;
-            scoreEl.textContent = score;
-            addParticleBurst(e.x, e.y, e.kind === "bossy" ? 30 : 18);
-            sfx.boom();
-            if (score > wave * 250) wave += 1;
-          }
-          break;
+ if(g("createdAtText")){
+   g("createdAtText").value=makeDateText(currentDate);
+ }
+
+ setupTimeSelects();
+
+ if(g("xrayDate")) g("xrayDate").value=formatDateForInput(currentDate);
+ if(g("xrayHour")) g("xrayHour").value=pad(currentDate.getHours());
+ if(g("xrayMinute")) g("xrayMinute").value=pad(currentDate.getMinutes());
+
+ setupAgents();
+ updateXrayText();
+
+ if(g("items") && document.querySelectorAll("#items .item").length===0){
+   addItem("","","","","","","カートン","");
+ }
+
+ updateReport();
+};
+</script>
+
+<script>
+/* ===== 自動下書き保存：端末放置・再読み込み対策 ===== */
+(function(){
+  var DRAFT_KEY = "cargoReportDraft_v1";
+  var saveTimer = null;
+  var restoringDraft = false;
+
+  function setDraftStatus(text){
+    var el = document.getElementById("draftStatus");
+    if(el) el.innerText = text;
+  }
+
+  function readField(id){
+    var el = document.getElementById(id);
+    return el ? el.value : "";
+  }
+
+  function writeField(id, value){
+    var el = document.getElementById(id);
+    if(el) el.value = value || "";
+  }
+
+  function collectItemsForDraft(){
+    var rows = [];
+    var boxes = document.querySelectorAll("#items .item");
+    boxes.forEach(function(box){
+      var id = (box.id || "").replace("item", "");
+      if(!id) return;
+      rows.push({
+        no: readField("no"+id),
+        l: readField("l"+id),
+        w: readField("w"+id),
+        h: readField("h"+id),
+        p: readField("p"+id),
+        kg: readField("kg"+id),
+        shape: readField("shape"+id),
+        remarks: readField("remarks"+id)
+      });
+    });
+    return rows;
+  }
+
+  function collectDraft(){
+    return {
+      savedAt: new Date().toISOString(),
+      fields: {
+        staff: readField("staff"),
+        agentSelect: readField("agentSelect"),
+        agentCode: readField("agentCode"),
+        inboundNo: readField("inboundNo"),
+        xrayDate: readField("xrayDate"),
+        xrayHour: readField("xrayHour"),
+        xrayMinute: readField("xrayMinute"),
+        xrayResult: readField("xrayResult"),
+        xrayAtText: readField("xrayAtText"),
+        shipper: readField("shipper"),
+        mawb: readField("mawb"),
+        hawb: readField("hawb"),
+        createdAtText: readField("createdAtText")
+      },
+      items: collectItemsForDraft()
+    };
+  }
+
+  function saveDraftCore(showMessage){
+    if(restoringDraft) return;
+    try {
+      var draft = collectDraft();
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      if(showMessage){
+        setDraftStatus("下書きを保存しました。写真は保存対象外です。");
+      } else {
+        var now = new Date();
+        setDraftStatus("自動保存済み " + ("0"+now.getHours()).slice(-2) + ":" + ("0"+now.getMinutes()).slice(-2));
+      }
+    } catch(e) {
+      console.error(e);
+      setDraftStatus("下書き保存に失敗しました。端末の空き容量やブラウザ設定を確認してください。");
+    }
+  }
+
+  function scheduleSaveDraft(){
+    if(restoringDraft) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){ saveDraftCore(false); }, 500);
+  }
+
+  function restoreDraftCore(showMessage){
+    try {
+      var raw = localStorage.getItem(DRAFT_KEY);
+      if(!raw){
+        if(showMessage) alert("保存された下書きはありません。");
+        return false;
+      }
+
+      var draft = JSON.parse(raw);
+      restoringDraft = true;
+
+      var f = draft.fields || {};
+      writeField("staff", f.staff);
+      writeField("xrayDate", f.xrayDate);
+      writeField("xrayHour", f.xrayHour);
+      writeField("xrayMinute", f.xrayMinute);
+      writeField("xrayResult", f.xrayResult);
+      writeField("shipper", f.shipper);
+      writeField("mawb", f.mawb);
+      writeField("hawb", f.hawb);
+
+      var agent = document.getElementById("agentSelect");
+      if(agent && f.agentSelect !== undefined){
+        agent.value = f.agentSelect;
+        if(typeof onAgentChange === "function"){
+          onAgentChange();
         }
       }
-    }
 
-    // player vs enemy
-    player.inv -= dt;
-    if (player.inv < 0) player.inv = 0;
+      writeField("createdAtText", f.createdAtText);
+      writeField("agentCode", f.agentCode);
+      writeField("inboundNo", f.inboundNo);
+      writeField("xrayAtText", f.xrayAtText);
 
-    if (player.inv === 0) {
-      for (const e of enemies) {
-        if (hitCircle(player.x, player.y, player.r, e.x, e.y, e.r)) {
-          life -= 1;
-          lifeEl.textContent = life;
-          player.inv = 1.2;
-          addParticleBurst(player.x, player.y, 40);
-          sfx.damage();
-          e.hp = 0;
-          if (life <= 0) {
-            running = false;
-            // game over sting
-            sfx.boom();
+      var itemsRoot = document.getElementById("items");
+      if(itemsRoot && typeof addItem === "function"){
+        itemsRoot.innerHTML = "";
+        itemCount = 0;
+
+        var items = draft.items || [];
+        if(items.length === 0){
+          for(var i=0; i<12; i++){
+            addItem("","","","","","","カートン","");
           }
-          break;
+        } else {
+          items.forEach(function(r){
+            addItem(r.no || "", r.l || "", r.w || "", r.h || "", r.p || "", r.kg || "", r.shape || "カートン", r.remarks || "");
+          });
         }
       }
-      enemies = enemies.filter(e => e.hp > 0);
+
+      if(typeof updateXrayText === "function"){
+        updateXrayText();
+      }
+      writeField("xrayAtText", f.xrayAtText || readField("xrayAtText"));
+      if(typeof updateReport === "function"){
+        updateReport();
+      }
+
+      restoringDraft = false;
+
+      if(showMessage){
+        alert("下書きを復元しました。写真は再選択してください。");
+      }
+      setDraftStatus("下書きを復元しました。写真は保存対象外です。");
+      return true;
+    } catch(e) {
+      restoringDraft = false;
+      console.error(e);
+      if(showMessage) alert("下書き復元に失敗しました。");
+      setDraftStatus("下書き復元に失敗しました。");
+      return false;
     }
   }
 
-  // ====== Draw ======
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
+  window.saveDraftNow = function(){
+    saveDraftCore(true);
+  };
 
-    // stars
-    ctx.save();
-    for (const s of stars) {
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = "rgba(255,255,255,.85)";
-      ctx.fillRect(s.x, s.y, s.s, s.s);
+  window.restoreDraftNow = function(){
+    restoreDraftCore(true);
+  };
+
+  window.clearDraftNow = function(){
+    if(!confirm("保存された下書きを削除しますか？")) return;
+    localStorage.removeItem(DRAFT_KEY);
+    setDraftStatus("下書きを削除しました。");
+  };
+
+  window.addEventListener("load", function(){
+    setTimeout(function(){
+      var root = document.querySelector(".card");
+      if(root){
+        root.addEventListener("input", scheduleSaveDraft, true);
+        root.addEventListener("change", scheduleSaveDraft, true);
+      }
+
+      if(localStorage.getItem(DRAFT_KEY)){
+        restoreDraftCore(false);
+      } else {
+        setDraftStatus("入力内容は自動で下書き保存されます。写真は保存対象外です。");
+      }
+    }, 500);
+  });
+
+  window.addEventListener("beforeunload", function(){
+    saveDraftCore(false);
+  });
+
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "hidden"){
+      saveDraftCore(false);
     }
-    ctx.restore();
-
-    // vignette
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    const g = ctx.createRadialGradient(W/2, H/2, 80, W/2, H/2, 520);
-    g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(0,0,0,0.75)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,W,H);
-    ctx.restore();
-
-    for (const b of bullets) drawBullet(b);
-    for (const e of enemies) drawEnemy(e);
-
-    const blink = player.inv > 0 ? (Math.floor(now()/90) % 2 === 0) : false;
-    if (!blink) drawShip(player.x, player.y, player.r, player.inv > 0);
-
-    for (const p of particles) {
-      ctx.save();
-      ctx.globalAlpha = p.a;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(255,255,255,.9)";
-      ctx.fill();
-      ctx.restore();
-    }
-
-    if (!running) {
-      ctx.save();
-      ctx.globalAlpha = 0.92;
-      ctx.fillStyle = "rgba(0,0,0,.55)";
-      ctx.fillRect(0, 0, W, H);
-
-      ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(255,255,255,.95)";
-      ctx.font = "800 40px system-ui";
-      ctx.fillText("GAME OVER", W/2, H/2 - 20);
-
-      ctx.font = "700 16px system-ui";
-      ctx.fillStyle = "rgba(255,255,255,.85)";
-      ctx.fillText(`Score: ${score}   Wave: ${wave}`, W/2, H/2 + 18);
-
-      ctx.fillStyle = "rgba(255,255,255,.75)";
-      ctx.fillText("Restartで再挑戦", W/2, H/2 + 48);
-      ctx.restore();
-    }
-  }
-
-  // ====== Loop ======
-  function loop() {
-    const t = now();
-    const dt = Math.min(0.033, (t - lastT) / 1000);
-    lastT = t;
-    update(dt);
-    draw();
-    requestAnimationFrame(loop);
-  }
-
-  reset();
-  loop();
+  });
 })();
 </script>
+
 </body>
 </html>
